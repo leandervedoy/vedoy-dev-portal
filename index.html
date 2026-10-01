@@ -22,6 +22,7 @@
     <section class="mission-entry" id="mission-entry" aria-label="Vedøy Core entry screen">
       <div class="entry-noise"></div><div class="entry-topline"><span>VEDØY CORE / SYSTEM ENTRY</span><span>BUILD 01.26 · NORWAY / EU</span></div>
       <div class="entry-center"><div class="entry-orbit orbit-a"></div><div class="entry-orbit orbit-b"></div><div class="entry-mark"><img src="assets/brand/vedoy-mark.png" alt="Vedøy" /></div><span class="entry-kicker">CONTROL PLANE INITIALIZING</span><h1>Choose your<br /><em>mission.</em></h1><p>One developer portal for agents, communications and edge data.</p><div class="mission-grid"><button type="button" data-mission="personal"><b>01</b><span>Personal</span><small>Numbers · SMS · Calls</small></button><button type="button" data-mission="business"><b>02</b><span>Business</span><small>Routing · Teams · Usage</small></button><button type="button" data-mission="agents"><b>03</b><span>AI Agents</span><small>Models · Tools · Runs</small></button><button type="button" data-mission="maritime"><b>04</b><span>Maritime</span><small>AIS · Voice · Edge</small></button></div><button class="entry-launch" type="button" id="enter-core">Enter Vedøy Core <span>→</span></button></div>
+      <div class="entry-story"><article class="story-step"><span>01 / PERSONAL COMPUTE</span><div class="story-computer"><div class="computer-screen"><span class="screen-bar">VEDØY / PERSONAL</span><strong>+47 48 21 73 09</strong><small>Private number · active</small><i></i></div><div class="computer-base"></div></div><div><h2>One secure number.<br /><em>Everywhere you work.</em></h2><p>Provision calls and SMS through a private Vedøy number, with consent, limits and usage visible from the same control plane.</p></div></article><article class="story-step business-step"><span>02 / BUSINESS OPERATIONS</span><div class="story-tv"><div class="tv-screen"><span class="screen-bar">BUSINESS CONTROL / LIVE</span><div class="tv-chart"><i></i><i></i><i></i><i></i><i></i></div><strong>12,840</strong><small>requests routed today</small><div class="tv-pill">● ALL SYSTEMS NOMINAL</div></div><div class="tv-stand"></div></div><div><h2>Turn communication<br /><em>into operations.</em></h2><p>Give teams a shared number, smart routing, usage dashboards and AI agents that can act on the next event.</p></div></article></div>
       <div class="entry-bottomline"><span><i></i> ALL SYSTEMS NOMINAL</span><span>SCROLL / EXPLORE / BUILD</span></div>
     </section>
     <div class="app-shell">
@@ -61,7 +62,7 @@
           <a class="nav-link" href="#changelog" data-page="changelog"><span class="nav-icon">◷</span> Changelog</a>
         </nav>
         <div class="sidebar-bottom">
-          <div class="help-card"><div class="help-spark">✳</div><strong>Building something?</strong><p>Tell us what you’re working on and request early access.</p><a href="#access" data-page="access">Request developer access <span>↗</span></a></div>
+          <div class="help-card"><div class="help-spark">✳</div><strong>Building something?</strong><p>Explore the sandbox and ship your first Vedøy integration.</p><a href="#playground" data-page="playground">Open API Playground <span>↗</span></a></div>
           <a class="back-link" href="https://vedoystudio.no" target="_blank" rel="noreferrer"><span>←</span> Vedøy Studio</a>
         </div>
       </aside>
@@ -70,7 +71,7 @@
         <header class="topbar">
           <button class="mobile-menu" id="mobile-menu" aria-label="Open navigation">☰</button>
           <div class="breadcrumbs"><span>Vedøy</span><span class="crumb-slash">/</span><span>Developers</span><span class="crumb-slash">/</span><strong id="breadcrumb-current">Overview</strong></div>
-          <div class="top-actions"><span class="coin-pill" id="coin-pill">🪙 <strong id="coin-balance">50</strong> Coins</span><button class="top-up-button" type="button" data-topup>Top up</button><span class="version-pill"><span></span> Developer preview</span><a class="top-link" href="#changelog" data-page="changelog">What's new <span>↗</span></a><a class="top-link agent-top-link" href="https://vedoy-ai.vercel.app/workspace">Agent Studio <span>↗</span></a><button class="account-button" id="account-button" type="button">Sign in <span>↗</span></button><a class="top-button" href="#access" data-page="access">Request access <span>↗</span></a></div>
+          <div class="top-actions"><span class="coin-pill" id="coin-pill">🪙 <strong id="coin-balance">50</strong> Coins</span><button class="top-up-button" type="button" data-topup>Top up</button><span class="version-pill"><span></span> Developer preview</span><a class="top-link" href="#changelog" data-page="changelog">What's new <span>↗</span></a><a class="top-link agent-top-link" href="https://vedoy-ai.vercel.app/workspace">Agent Studio <span>↗</span></a><button class="account-button" id="account-button" type="button">Sign in <span>↗</span></button></div>
         </header>
 
         <div class="content-wrap" id="content-wrap">
@@ -79,7 +80,7 @@
               <div class="eyebrow"><span class="eyebrow-line"></span> API-FIRST PLATFORM FOR BUILDERS</div>
               <h1>Infrastructure for<br /><span>real-world agents.</span></h1>
               <p class="hero-text">Telephony, maritime signals and AI agents on one Vedøy control plane. Build products that can reach people, understand the edge and act with confidence.</p>
-              <div class="hero-actions"><a href="#playground" data-page="playground" class="button-primary">Start building <span>↗</span></a><a href="#access" data-page="access" class="button-secondary">Talk to an engineer <span>→</span></a></div>
+              <div class="hero-actions"><a href="#playground" data-page="playground" class="button-primary">Start building <span>↗</span></a><a href="mailto:hello@vedoystudio.no" class="button-secondary">Talk to an engineer <span>→</span></a></div>
               <div class="hero-note"><span class="pulse-dot"></span> API-first infrastructure · Norway / Europe</div>
             </div>
             <div class="hero-art" aria-label="Illustration of connected Vedøy products">
@@ -97,7 +98,7 @@
 
           <section class="quick-panel" aria-label="API availability">
             <div class="quick-intro"><span class="panel-icon">⌘</span><div><span class="overline">ONE CONTROL PLANE</span><h2>Many primitives. One account.</h2><p>Compose phone numbers, messaging, business routing, maritime data and agents through one developer portal with clear limits and usage.</p></div></div>
-            <div class="availability-card"><span class="availability-mark" aria-hidden="true">i</span><div><strong>Agent Studio is available today</strong><p>Use the Vedøy AI workspace now. Other API products shown here are planned or in preview; contact us to discuss a partner integration.</p><a href="https://vedoy-ai.vercel.app/workspace">Open Agent Studio <span>↗</span></a><a class="availability-secondary" href="#access" data-page="access">Discuss an API integration <span>→</span></a></div></div>
+            <div class="availability-card"><span class="availability-mark" aria-hidden="true">i</span><div><strong>Agent Studio is available today</strong><p>Use the Vedøy AI workspace now. Other API products shown here are planned or in preview; contact us to discuss a partner integration.</p><a href="https://vedoy-ai.vercel.app/workspace">Open Agent Studio <span>↗</span></a><a class="availability-secondary" href="mailto:hello@vedoystudio.no">Discuss an API integration <span>→</span></a></div></div>
           </section>
 
           <section class="api-roadmap" aria-labelledby="api-roadmap-title">
@@ -108,7 +109,7 @@
               <article class="roadmap-card"><span class="roadmap-index">03</span><div><span class="roadmap-tag">REAL-TIME VOICE</span><h3>Voice &amp; dispatch</h3><p>Explore secure voice and push-to-talk workflows for connected maritime teams.</p></div><span class="roadmap-state">Exploration</span></article>
               <article class="roadmap-card"><span class="roadmap-index">04</span><div><span class="roadmap-tag">AUDIO PROCESSING</span><h3>Audio generation</h3><p>Programmable rendering and audio workflows for interactive products and media.</p></div><span class="roadmap-state">Exploration</span></article>
             </div>
-            <div class="roadmap-contact"><span>Building for maritime operations or real-time media?</span><a href="#access" data-page="access">Tell us what you need <b>→</b></a></div>
+            <div class="roadmap-contact"><span>Building for maritime operations or real-time media?</span><a href="mailto:hello@vedoystudio.no">Tell us what you need <b>→</b></a></div>
             <p class="roadmap-footnote">Roadmap items are product direction only. Data sources, service levels, pricing and API contracts require validation before launch.</p>
           </section>
 
