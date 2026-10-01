@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="description" content="Browse and download the Vedøy Icons library." />
+    <title>Vedøy Icons — Developer library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="icons.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="../index.html"><span class="brand-mark">v</span><span>vedøy<span class="brand-dot">.</span></span></a>
+      <nav aria-label="Main navigation"><a href="../index.html">Developer portal</a><span aria-hidden="true">/</span><strong>Vedøy Icons</strong></nav>
+      <a class="download-all" href="../assets/vedoy-icons/vedoy-icons-symbols-black-and-white.zip" download>Download symbol pack <span>↓</span></a>
+    </header>
+    <main class="wrap">
+      <section class="intro">
+        <div class="eyebrow"><span></span> THE VEDØY ICON LIBRARY</div>
+        <h1>Good icons.<br /><em>Ready to use.</em></h1>
+        <p>Just the symbol, with a transparent background. Download every icon in black or white as a multi-size <code>.ico</code>.</p>
+        <div class="stats"><strong id="icon-count">65 icons</strong><span>Black + white</span><span>16–256 px</span></div>
+        <div class="pack-links" aria-label="Separate icon packs">
+          <div class="pack-card"><strong>Pack 01</strong><a href="../assets/vedoy-icons/vedoy-icons-sheet-01-black.zip" download>Black</a><a href="../assets/vedoy-icons/vedoy-icons-sheet-01-white.zip" download>White</a></div>
+          <div class="pack-card"><strong>Pack 02</strong><a href="../assets/vedoy-icons/vedoy-icons-sheet-02-black.zip" download>Black</a><a href="../assets/vedoy-icons/vedoy-icons-sheet-02-white.zip" download>White</a></div>
+          <div class="pack-card"><strong>Pack 03</strong><a href="../assets/vedoy-icons/vedoy-icons-sheet-03-black.zip" download>Black</a><a href="../assets/vedoy-icons/vedoy-icons-sheet-03-white.zip" download>White</a></div>
+          <div class="pack-card essential-pack"><strong>Essentials</strong><a href="../assets/vedoy-icons/vedoy-icons-essential-black.zip" download>Black</a><a href="../assets/vedoy-icons/vedoy-icons-essential-white.zip" download>White</a></div>
+        </div>
+      </section>
+      <section class="library" aria-label="Icon library">
+        <div class="controls">
+          <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search icons" autocomplete="off" /></label>
+          <div class="filters" id="filters" aria-label="Filter icons by category"></div>
+          <a class="download-mobile" href="../assets/vedoy-icons/vedoy-icons-symbols-black-and-white.zip" download>Download symbol pack ↓</a>
+        </div>
+        <div class="grid" id="grid" aria-live="polite"></div>
+        <p id="empty" class="empty" hidden>No icons match that search. Try another name or category.</p>
+      </section>
+      <footer><a href="../index.html">← Back to the developer portal</a><span>Vedøy Icons · 2026</span></footer>
+    </main>
+    <script src="icons.js"></script>
+  </body>
+</html>
