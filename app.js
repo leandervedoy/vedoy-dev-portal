@@ -27,6 +27,9 @@ let coins=Number(localStorage.getItem("vedoy-coins")||50);
 function updateCoins(){const el=document.querySelector("#coin-balance");if(el)el.textContent=coins;localStorage.setItem("vedoy-coins",String(coins));}
 function toast(message,kind="success"){let t=document.querySelector(".portal-toast");if(!t){t=document.createElement("div");t.className="portal-toast";document.body.append(t);}t.textContent=message;t.dataset.kind=kind;t.classList.add("show");clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove("show"),2600);}
 updateCoins();
+const missionEntry=document.querySelector("#mission-entry");
+document.querySelectorAll("[data-mission]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("[data-mission]").forEach(x=>x.classList.remove("selected"));button.classList.add("selected");const target=button.dataset.mission;sessionStorage.setItem("vedoy-entry-mission",target);document.querySelector("#enter-core").dataset.target=target;}));
+document.querySelector("#enter-core")?.addEventListener("click",()=>{missionEntry?.classList.add("exit");setTimeout(()=>{if(missionEntry)missionEntry.hidden=true;const target=document.querySelector("#enter-core")?.dataset.target;if(target&&pages[target]){openPage(target);history.replaceState(null,"",`#${target}`);}},620);});
 
 function docBody(key){
  const p=pages[key]||pages.overview;
