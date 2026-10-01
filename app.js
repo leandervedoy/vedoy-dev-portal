@@ -28,6 +28,8 @@ function updateCoins(){const el=document.querySelector("#coin-balance");if(el)el
 function toast(message,kind="success"){let t=document.querySelector(".portal-toast");if(!t){t=document.createElement("div");t.className="portal-toast";document.body.append(t);}t.textContent=message;t.dataset.kind=kind;t.classList.add("show");clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove("show"),2600);}
 updateCoins();
 const missionEntry=document.querySelector("#mission-entry");
+missionEntry?.addEventListener("pointermove",event=>{const r=missionEntry.getBoundingClientRect();const x=(event.clientX-r.left)/r.width-.5;const y=(event.clientY-r.top)/r.height-.5;missionEntry.style.setProperty("--pointer-x",`${x*18}deg`);missionEntry.style.setProperty("--pointer-y",`${y*-14}deg`);missionEntry.style.setProperty("--glow-x",`${(x+.5)*100}%`);missionEntry.style.setProperty("--glow-y",`${(y+.5)*100}%`);});
+missionEntry?.addEventListener("pointerleave",()=>{missionEntry.style.setProperty("--pointer-x","0deg");missionEntry.style.setProperty("--pointer-y","0deg");});
 document.querySelectorAll("[data-mission]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("[data-mission]").forEach(x=>x.classList.remove("selected"));button.classList.add("selected");const target=button.dataset.mission;sessionStorage.setItem("vedoy-entry-mission",target);document.querySelector("#enter-core").dataset.target=target;}));
 document.querySelector("#enter-core")?.addEventListener("click",()=>{missionEntry?.classList.add("exit");setTimeout(()=>{if(missionEntry)missionEntry.hidden=true;const target=document.querySelector("#enter-core")?.dataset.target;if(target&&pages[target]){openPage(target);history.replaceState(null,"",`#${target}`);}},620);});
 
