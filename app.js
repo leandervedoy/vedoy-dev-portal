@@ -34,6 +34,10 @@ updateCoins();
 const missionEntry=document.querySelector("#mission-entry");
 missionEntry?.addEventListener("pointermove",event=>{const r=missionEntry.getBoundingClientRect();const x=(event.clientX-r.left)/r.width-.5;const y=(event.clientY-r.top)/r.height-.5;missionEntry.style.setProperty("--pointer-x",`${x*18}deg`);missionEntry.style.setProperty("--pointer-y",`${y*-14}deg`);missionEntry.style.setProperty("--glow-x",`${(x+.5)*100}%`);missionEntry.style.setProperty("--glow-y",`${(y+.5)*100}%`);});
 missionEntry?.addEventListener("pointerleave",()=>{missionEntry.style.setProperty("--pointer-x","0deg");missionEntry.style.setProperty("--pointer-y","0deg");});
+function updateMissionScroll(){if(!missionEntry)return;const max=Math.max(1,missionEntry.scrollHeight-missionEntry.clientHeight);const progress=Math.min(1,missionEntry.scrollTop/max);missionEntry.style.setProperty("--scroll-progress",progress.toFixed(3));missionEntry.classList.toggle("mission-scrolled",progress>.035);missionEntry.classList.toggle("mission-deep-scrolled",progress>.22);}
+missionEntry?.addEventListener("scroll",updateMissionScroll,{passive:true});
+window.addEventListener("scroll",()=>{if(window.scrollY>24&&missionEntry&&!missionEntry.hidden){missionEntry.classList.add("mission-scrolled");}}, {passive:true});
+updateMissionScroll();
 const laptopResponse=document.querySelector("#laptop-response");
 document.querySelectorAll(".api-laptop-row").forEach(row=>row.addEventListener("click",()=>{document.querySelectorAll(".api-laptop-row").forEach(x=>x.classList.remove("active"));row.classList.add("active");if(laptopResponse)laptopResponse.textContent=JSON.stringify({status:Number(row.dataset.apiStatus),route:row.dataset.apiRoute,label:row.dataset.apiLabel,latency:row.querySelector("small")?.textContent?.split("·")[1]?.trim()||"mock"},null,2);}));
 document.querySelectorAll("[data-api-open]").forEach(button=>button.addEventListener("click",()=>{openPage("playground");history.replaceState(null,"","#playground");window.scrollTo({top:0,behavior:"smooth"});}));
