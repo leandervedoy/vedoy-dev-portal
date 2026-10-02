@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09111a" />
+    <meta name="description" content="The developer hub for Vedøy APIs, tools, and platform guides." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vedøy Developers — Build with Vedøy" />
+    <meta property="og:description" content="Explore Vedøy developer guides and request early access to platform APIs." />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/brand/favicon.png" />
+    <link rel="apple-touch-icon" href="assets/brand/favicon.png" />
+    <title>Developers — Vedøy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body>
+    <section class="mission-entry" id="mission-entry" aria-label="Vedøy Core entry screen">
+      <div class="entry-noise"></div><div class="entry-topline"><span>VEDØY CORE / SYSTEM ENTRY</span><span>BUILD 01.26 · NORWAY / EU</span></div>
+      <div class="entry-center"><div class="entry-orbit orbit-a"></div><div class="entry-orbit orbit-b"></div><div class="entry-mark"><img src="assets/brand/vedoy-logo-white.png" alt="Vedøy" /></div><span class="entry-kicker">CONTROL PLANE INITIALIZING</span><h1>Choose your<br /><em>mission.</em></h1><p>One developer portal for agents, communications and edge data.</p><div class="mission-grid"><button type="button" data-mission="personal"><b>01</b><span>Personal</span><small>Numbers · SMS · Calls</small></button><button type="button" data-mission="business"><b>02</b><span>Business</span><small>Routing · Teams · Usage</small></button><button type="button" data-mission="agents"><b>03</b><span>AI Agents</span><small>Models · Tools · Runs</small></button><button type="button" data-mission="maritime"><b>04</b><span>Maritime</span><small>AIS · Voice · Edge</small></button></div><button class="entry-launch" type="button" id="enter-core">Enter Vedøy Core <span>→</span></button></div>
+      <div class="entry-story"><article class="story-step"><span>01 / PERSONAL COMPUTE</span><div class="story-computer"><div class="computer-screen"><span class="screen-bar">VEDØY / PERSONAL</span><strong>+47 48 21 73 09</strong><small>Private number · active</small><i></i></div><div class="computer-base"></div></div><div><h2>One secure number.<br /><em>Everywhere you work.</em></h2><p>Provision calls and SMS through a private Vedøy number, with consent, limits and usage visible from the same control plane.</p></div></article><article class="story-step business-step"><span>02 / BUSINESS OPERATIONS</span><div class="story-tv"><div class="tv-screen"><span class="screen-bar">BUSINESS CONTROL / LIVE</span><div class="tv-chart"><i></i><i></i><i></i><i></i><i></i></div><strong>12,840</strong><small>requests routed today</small><div class="tv-pill">● ALL SYSTEMS NOMINAL</div></div><div class="tv-stand"></div></div><div><h2>Turn communication<br /><em>into operations.</em></h2><p>Give teams a shared number, smart routing, usage dashboards and AI agents that can act on the next event.</p></div></article></div>
+      <section class="laptop-section" aria-label="API control surface"><div class="laptop-copy"><span class="entry-kicker">03 / API CONTROL SURFACE</span><h2>Your stack,<br /><em>one control plane.</em></h2><p>Click an endpoint on the laptop to inspect a mock response, then open the full API Playground.</p><button class="entry-launch" type="button" data-api-open>Explore API Playground <span>→</span></button></div><div class="api-laptop"><div class="laptop-screen"><div class="laptop-top"><span>VEDØY CORE / API CONSOLE</span><i>● LIVE MOCK</i></div><div class="laptop-api-list"><button type="button" class="api-laptop-row active" data-api-route="/v1/models" data-api-label="List models" data-api-method="GET" data-api-status="200"><b>GET</b><span>/v1/models</span><small>200 · 12ms</small></button><button type="button" class="api-laptop-row" data-api-route="/v1/agents/runs" data-api-label="Run agent" data-api-method="POST" data-api-status="202"><b>POST</b><span>/v1/agents/runs</span><small>202 · 41ms</small></button><button type="button" class="api-laptop-row" data-api-route="/v1/phone/numbers" data-api-label="Provision number" data-api-method="POST" data-api-status="201"><b>POST</b><span>/v1/phone/numbers</span><small>201 · 28ms</small></button></div><pre class="laptop-response" id="laptop-response">{ "status": 200, "data": ["vedoy-agent"] }</pre></div><div class="laptop-base"></div></div></section>
+      <section class="business-panel"><div><span class="entry-kicker">04 / BUSINESS SIGNALS</span><h2>Make every channel<br /><em>observable.</em></h2><p>Numbers, requests, agent runs and spend in one operational view.</p><a class="entry-launch" href="#business" data-page="business">Open business API <span>→</span></a></div><div class="business-metrics"><article><small>ACTIVE NUMBERS</small><strong>248</strong><span>+18% this month</span></article><article><small>API REQUESTS</small><strong>12.8k</strong><span>99.98% success</span></article><article><small>AGENT RUNS</small><strong>4,620</strong><span>41ms median</span></article><article><small>USAGE SPEND</small><strong>$184</strong><span>under budget</span></article></div></section>
+      <div class="entry-bottomline"><span><i></i> ALL SYSTEMS NOMINAL</span><span>SCROLL / EXPLORE / BUILD</span></div>
+    </section>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#overview" aria-label="Vedøy developer home">
+            <img class="brand-logo" src="assets/brand/vedoy-logo-white.png" alt="Vedøy" /><span class="brand-wordmark">DEVELOPER PORTAL</span>
+        </a>
+        <div class="workspace-label">DEVELOPER PORTAL <span class="tiny-orbit">✳</span></div>
+        <div class="sidebar-search-wrap">
+          <label class="sidebar-search" for="search-input"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.3 4.3"/></svg><input id="search-input" type="search" placeholder="Search docs..." autocomplete="off" /><kbd>⌘ K</kbd></label>
+          <div class="search-results" id="search-results" role="listbox" aria-label="Search results" hidden></div>
+        </div>
+        <nav class="side-nav" aria-label="Documentation">
+          <div class="nav-caption">GET STARTED</div>
+          <a class="nav-link active" href="#overview" data-page="overview"><span class="nav-icon">◫</span> Overview</a>
+          <a class="nav-link" href="#quickstart" data-page="quickstart"><span class="nav-icon">↗</span> Quickstart <span class="nav-new">5 MIN</span></a>
+          <a class="nav-link" href="#authentication" data-page="authentication"><span class="nav-icon">⌑</span> Authentication</a>
+          <a class="nav-link" href="#playground" data-page="playground"><span class="nav-icon">⌁</span> API Playground <span class="nav-new">LIVE</span></a>
+          <div class="nav-caption nav-caption-spaced">API REFERENCE</div>
+          <div class="nav-caption category-label">PRODUCTS</div>
+          <div class="nav-caption category-label">PERSONAL</div>
+          <a class="nav-link" href="#personal" data-page="personal"><span class="service-icon personal">P</span> Personal Phone</a>
+          <a class="nav-link" href="#phone" data-page="phone"><span class="service-icon personal">☎</span> Calls &amp; SMS</a>
+          <div class="nav-caption category-label">BUSINESS</div>
+          <a class="nav-link" href="#business" data-page="business"><span class="service-icon business">B</span> Business Number</a>
+          <a class="nav-link" href="#dashboard" data-page="dashboard"><span class="service-icon business">▦</span> Business Dashboard</a>
+          <div class="nav-caption category-label">AI PLATFORM</div>
+          <a class="nav-link" href="#agents" data-page="agents"><span class="service-icon ai">✳</span> AI Agents</a>
+          <a class="nav-link" href="#models" data-page="models"><span class="service-icon ai">◈</span> Models &amp; routing</a>
+          <a class="nav-link" href="#maritime" data-page="maritime"><span class="service-icon canvas">M</span> Maritime Edge</a>
+          <div class="nav-caption category-label">SERVICES</div>
+          <a class="nav-link" href="#products" data-page="products"><span class="nav-icon">◫</span> Product overview</a>
+          <a class="nav-link" href="#services" data-page="services"><span class="nav-icon">⌘</span> Services &amp; integrations</a>
+          <a class="nav-link" href="#pricing" data-page="pricing"><span class="nav-icon">$</span> Pricing</a>
+          <a class="nav-link" href="#identity" data-page="identity"><span class="service-icon identity">I</span> Identity</a>
+          <a class="nav-link" href="#find" data-page="find"><span class="service-icon find">F</span> Find</a>
+          <a class="nav-link" href="#ai" data-page="ai"><span class="service-icon ai">✳</span> AI</a>
+          <a class="nav-link" href="#canvas" data-page="canvas"><span class="service-icon canvas">C</span> Canvas</a>
+          <a class="nav-link" href="#sites" data-page="sites"><span class="service-icon sites">S</span> Sites</a>
+          <div class="nav-caption nav-caption-spaced">MORE</div>
+          <a class="nav-link" href="#sdks" data-page="sdks"><span class="nav-icon">⌘</span> SDKs &amp; tools</a>
+          <a class="nav-link agent-link" href="https://vedoy-ai.vercel.app/workspace"><span class="nav-icon">⌘</span> Agent Studio <span class="nav-new">OPEN ↗</span></a>
+          <a class="nav-link" href="#changelog" data-page="changelog"><span class="nav-icon">◷</span> Changelog</a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="help-card"><div class="help-spark">✳</div><strong>Building something?</strong><p>Explore the sandbox and ship your first Vedøy integration.</p><a href="#playground" data-page="playground">Open API Playground <span>↗</span></a></div>
+          <a class="back-link" href="https://vedoystudio.no" target="_blank" rel="noreferrer"><span>←</span> Vedøy Studio</a>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobile-menu" aria-label="Open navigation">☰</button>
+          <div class="breadcrumbs"><span>Vedøy</span><span class="crumb-slash">/</span><span>Developers</span><span class="crumb-slash">/</span><strong id="breadcrumb-current">Overview</strong></div>
+          <div class="top-actions"><span class="coin-pill" id="coin-pill">🪙 <strong id="coin-balance">50</strong> Coins</span><button class="top-up-button" type="button" data-topup>Top up</button><span class="version-pill"><span></span> Developer preview</span><a class="top-link" href="#changelog" data-page="changelog">What's new <span>↗</span></a><a class="top-link agent-top-link" href="https://vedoy-ai.vercel.app/workspace">Agent Studio <span>↗</span></a><button class="account-button" id="account-button" type="button">Sign in <span>↗</span></button></div>
+        </header>
+
+        <div class="content-wrap" id="content-wrap">
+          <section class="hero" id="overview">
+            <div class="hero-copy">
+              <div class="eyebrow"><span class="eyebrow-line"></span> API-FIRST PLATFORM FOR BUILDERS</div>
+              <h1>Infrastructure for<br /><span>real-world agents.</span></h1>
+              <p class="hero-text">Telephony, maritime signals and AI agents on one Vedøy control plane. Build products that can reach people, understand the edge and act with confidence.</p>
+              <div class="hero-actions"><a href="#playground" data-page="playground" class="button-primary">Start building <span>↗</span></a><a href="mailto:hello@vedoystudio.no" class="button-secondary">Talk to an engineer <span>→</span></a></div>
+              <div class="hero-note"><span class="pulse-dot"></span> API-first infrastructure · Norway / Europe</div>
+            </div>
+            <div class="hero-art" aria-label="Illustration of connected Vedøy products">
+              <div class="art-grid"></div><svg class="connection-lines" viewBox="0 0 420 320" aria-hidden="true"><path d="M211 160 103 82M211 160l109-85M211 160l133 79M211 160l-113 88M211 160V39"/><circle cx="211" cy="160" r="5"/><circle cx="103" cy="82" r="3"/><circle cx="320" cy="85" r="3"/><circle cx="344" cy="239" r="3"/><circle cx="98" cy="248" r="3"/><circle cx="211" cy="39" r="3"/></svg>
+              <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+              <div class="hub-core"><span class="core-symbol">v</span><span>vedøy</span></div>
+              <div class="float-card float-identity"><span class="float-icon identity">I</span><span>Identity</span></div>
+              <div class="float-card float-ai"><span class="float-icon ai">✳</span><span>Vedøy AI</span></div>
+              <div class="float-card float-canvas"><span class="float-icon canvas">C</span><span>Canvas</span></div>
+              <div class="float-card float-sites"><span class="float-icon sites">S</span><span>Sites</span></div>
+              <div class="float-card float-find"><span class="float-icon find">F</span><span>Find</span></div>
+              <div class="mission-console"><span><i></i> CORE NETWORK / ONLINE</span><b>04</b><small>ACTIVE PRIMITIVES</small><b>12ms</b><small>EDGE LATENCY</small></div><span class="art-label">A connected toolkit <span>01 — 05</span></span>
+            </div>
+          </section>
+
+          <section class="quick-panel" aria-label="API availability">
+            <div class="quick-intro"><span class="panel-icon">⌘</span><div><span class="overline">ONE CONTROL PLANE</span><h2>Many primitives. One account.</h2><p>Compose phone numbers, messaging, business routing, maritime data and agents through one developer portal with clear limits and usage.</p></div></div>
+            <div class="availability-card"><span class="availability-mark" aria-hidden="true">i</span><div><strong>Agent Studio is available today</strong><p>Use the Vedøy AI workspace now. Other API products shown here are planned or in preview; contact us to discuss a partner integration.</p><a href="https://vedoy-ai.vercel.app/workspace">Open Agent Studio <span>↗</span></a><a class="availability-secondary" href="mailto:hello@vedoystudio.no">Discuss an API integration <span>→</span></a></div></div>
+          </section>
+
+          <section class="api-roadmap" aria-labelledby="api-roadmap-title">
+            <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE API OPPORTUNITY</div><h2 id="api-roadmap-title">One platform. High-value integrations.</h2><p class="roadmap-intro">These are planned API product areas from the Vedøy Core architecture. They are not public production endpoints yet.</p></div><span class="roadmap-badge"><i></i> PRODUCT DIRECTION</span></div>
+            <div class="roadmap-grid">
+              <article class="roadmap-card"><span class="roadmap-index">01</span><div><span class="roadmap-tag">MARITIME DATA</span><h3>Vessel telemetry</h3><p>AIS positions, vessel history, geofencing and event streams for port and fleet operations.</p></div><span class="roadmap-state">Planned</span></article>
+              <article class="roadmap-card"><span class="roadmap-index">02</span><div><span class="roadmap-tag">PORT OPERATIONS</span><h3>Environment &amp; ETA</h3><p>Weather, sea conditions and operational signals designed to support arrival planning.</p></div><span class="roadmap-state">Planned</span></article>
+              <article class="roadmap-card"><span class="roadmap-index">03</span><div><span class="roadmap-tag">REAL-TIME VOICE</span><h3>Voice &amp; dispatch</h3><p>Explore secure voice and push-to-talk workflows for connected maritime teams.</p></div><span class="roadmap-state">Exploration</span></article>
+              <article class="roadmap-card"><span class="roadmap-index">04</span><div><span class="roadmap-tag">AUDIO PROCESSING</span><h3>Audio generation</h3><p>Programmable rendering and audio workflows for interactive products and media.</p></div><span class="roadmap-state">Exploration</span></article>
+            </div>
+            <div class="roadmap-contact"><span>Building for maritime operations or real-time media?</span><a href="mailto:hello@vedoystudio.no">Tell us what you need <b>→</b></a></div>
+            <p class="roadmap-footnote">Roadmap items are product direction only. Data sources, service levels, pricing and API contracts require validation before launch.</p>
+          </section>
+
+          <section class="api-section" id="api-map">
+            <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE TOOLKIT</div><h2>One platform, many possibilities.</h2></div><a href="#quickstart" data-page="quickstart" class="text-link">View all documentation <span>→</span></a></div>
+            <div class="api-grid">
+              <a class="api-card" href="#identity" data-page="identity"><div class="api-card-top"><span class="api-icon identity">I</span><span class="card-arrow">↗</span></div><div class="service-status status-preview">API preview</div><h3>Identity</h3><p>One sign-in for the Vedøy ecosystem. Build secure experiences around people and teams.</p><div class="card-meta"><span>AUTH &amp; USERS</span><span>Explore <b>→</b></span></div></a>
+              <a class="api-card" href="#find" data-page="find"><div class="api-card-top"><span class="api-icon find">F</span><span class="card-arrow">↗</span></div><div class="service-status status-preview">API preview</div><h3>Find</h3><p>Search across content and products with a discovery layer built for Vedøy.</p><div class="card-meta"><span>SEARCH &amp; DISCOVERY</span><span>Explore <b>→</b></span></div></a>
+              <a class="api-card" href="#ai" data-page="ai"><div class="api-card-top"><span class="api-icon ai">✳</span><span class="card-arrow">↗</span></div><div class="service-status status-workspace">Workspace available</div><h3>Vedøy AI</h3><p>Build and use agents in Agent Studio. Public API access is still in preview.</p><div class="card-meta"><span>MODELS &amp; AGENTS</span><span>Explore <b>→</b></span></div></a>
+              <a class="api-card" href="#canvas" data-page="canvas"><div class="api-card-top"><span class="api-icon canvas">C</span><span class="card-arrow">↗</span></div><div class="service-status status-preview">API preview</div><h3>Canvas</h3><p>Create visual workspaces for ideas, collaboration and making things together.</p><div class="card-meta"><span>BOARDS &amp; FRAMES</span><span>Explore <b>→</b></span></div></a>
+              <a class="api-card" href="#sites" data-page="sites"><div class="api-card-top"><span class="api-icon sites">S</span><span class="card-arrow">↗</span></div><div class="service-status status-preview">API preview</div><h3>Sites</h3><p>Publish and manage websites in the Vedøy ecosystem with a clean workflow.</p><div class="card-meta"><span>WEB &amp; PUBLISHING</span><span>Explore <b>→</b></span></div></a>
+              <a class="api-card card-more" href="#sdks" data-page="sdks"><div class="api-card-top"><span class="api-icon more">+</span><span class="card-arrow">↗</span></div><h3>And what’s next</h3><p>Explore tools, SDKs and new capabilities as the platform takes shape.</p><div class="card-meta"><span>TOOLS &amp; SDKs</span><span>Explore <b>→</b></span></div></a>
+            </div>
+          </section>
+
+          <section class="bottom-band"><div class="band-spark">✳</div><div><span class="overline">A GOOD PLACE TO BEGIN</span><h2>Small steps. Big ideas.</h2><p>Set up your workspace, make a first request, and see what clicks.</p></div><a href="#quickstart" data-page="quickstart" class="button-dark">Read the quickstart <span>→</span></a><div class="band-decoration">v</div></section>
+          <footer class="footer"><span>© 2026 Vedøy Studio</span><div><a href="#quickstart" data-page="quickstart">Quickstart</a><a href="https://vedoystudio.no/policies" target="_blank" rel="noreferrer">Policies ↗</a><a href="https://vedoystudio.no" target="_blank" rel="noreferrer">vedoystudio.no ↗</a></div><span>Built for people who build.</span></footer>
+        </div>
+      </main>
+    </div>
+    <div class="auth-backdrop" id="auth-modal" hidden>
+      <section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button class="auth-close" id="auth-close" type="button" aria-label="Close sign-in">×</button>
+        <div class="auth-mark">v</div>
+        <div class="auth-kicker">YOUR VEDØY ACCOUNT</div>
+        <h2 id="auth-title">Welcome back.</h2>
+        <p class="auth-copy">Sign in with the account you use across Vedøy.</p>
+        <form id="auth-form">
+          <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" required />
+          <label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" required />
+          <div id="auth-message" class="auth-message" role="status" aria-live="polite"></div>
+          <button class="auth-submit" id="auth-submit" type="submit">Sign in securely <span>→</span></button>
+        </form>
+        <div class="auth-account" id="auth-account" hidden><p>You’re signed in as <strong id="auth-user-email"></strong>.</p><button class="auth-signout" id="auth-signout" type="button">Sign out</button></div>
+        <p class="auth-register">New to Vedøy? <a href="https://vedoy-oauth.vercel.app" target="_blank" rel="noreferrer">Create an account with Vedøy OAuth ↗</a></p>
+        <p class="auth-footnote">Your account is secured by Vedøy and your profile stays private to you.</p>
+      </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+    <script src="auth.js"></script>
+    <script src="access.js"></script>
+  </body>
+</html>
