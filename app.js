@@ -152,7 +152,7 @@ function openPage(key,scroll=true){
    block.append(button);
   });
  }
-document.addEventListener("click",e=>{const link=e.target.closest("[data-page]");if(!link)return;e.preventDefault();const key=link.dataset.page;closeMenu();if(missionEntry&&!missionEntry.hidden){leaveMission(key);return;}openPage(key);history.replaceState(null,"",`#${key}`);});
+ document.addEventListener("click",e=>{const link=e.target.closest("a[data-page],a[href^='#']");if(!link)return;const key=link.dataset.page||link.getAttribute("href")?.slice(1);if(!pages[key])return;e.preventDefault();e.stopPropagation();closeMenu();if(missionEntry&&!missionEntry.hidden){leaveMission(key);return;}openPage(key);history.replaceState(null,"",`#${key}`);});
 const hash=location.hash.slice(1);if(pages[hash]&&hash!=="overview")openPage(hash,false);
 
 document.addEventListener("click",async e=>{const button=e.target.closest("[data-copy]");if(!button)return;try{await navigator.clipboard.writeText(button.dataset.copy);button.innerHTML='Copied <span>✓</span>';setTimeout(()=>button.innerHTML='Copy <span>▢</span>',1400);}catch{button.innerHTML='Select code';}});

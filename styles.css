@@ -260,6 +260,16 @@ html[data-theme="dark"] body[data-page="overview"] .core-intro h1,html[data-them
 html[data-theme="dark"] body[data-page="overview"] .core-intro>p,html[data-theme="dark"] body[data-page="overview"] .core-section-heading p{color:#aec3cb}
 html[data-theme="dark"] body[data-page="overview"] .core-eyebrow,html[data-theme="dark"] body[data-page="overview"] .core-card-index{color:#75dfff}
 html[data-theme="dark"] body[data-page="overview"] .core-content>section{border-bottom-color:#75b8d52a}
+.api-estimator .estimator-copy h2{color:#10293b!important;text-shadow:none}
+.api-estimator .estimator-copy>p{color:#536b78!important}
+.api-estimator .estimator-copy ul{color:#224658!important}
+.api-estimator .estimator-copy .overline{color:#527582!important}
+html[data-theme="dark"] .api-estimator .estimator-copy h2{color:#eef9ff!important}
+html[data-theme="dark"] .api-estimator .estimator-copy>p{color:#b6cbd4!important}
+html[data-theme="dark"] .api-estimator .estimator-copy ul{color:#c6dce3!important}
+html[data-theme="dark"] .api-estimator .estimator-copy .overline{color:#78d7ee!important}
+.sidebar-bottom{background:transparent!important;box-shadow:none!important}
+.sidebar-bottom .help-card{display:none!important}
 .phone-provisioner{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.8fr);gap:24px;margin:28px 0;padding:28px;border:1px solid #1f596b35;border-radius:22px;background:linear-gradient(135deg,#eff9f7,#e6f1f4)}
 .phone-provisioner h2{margin:7px 0 10px}.phone-provisioner-copy p{max-width:48ch}.phone-live-state{font:700 .78rem/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#176b62}.phone-live-state[data-kind="warning"]{color:#9a5a00}.phone-live-state[data-kind="error"]{color:#ae3030}
 .phone-search-form{display:grid;gap:12px;align-content:start}.phone-search-form label{display:grid;gap:6px;font-size:.78rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#395358}.phone-search-form select{width:100%;border:1px solid #b9d1d3;border-radius:10px;padding:12px;background:#fff;color:#17383e}
