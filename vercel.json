@@ -1,7 +1,7 @@
 {
   "outputDirectory": "public",
   "functions": {
-    "api/[...path].js": {
+    "api/**/*.js": {
       "maxDuration": 10
     }
   },
