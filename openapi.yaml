@@ -1,0 +1,75 @@
+openapi: 3.1.0
+info:
+  title: Vedøy Developer API
+  version: 2026-10-08
+  description: Canonical API surface for Vedøy developer products. Provider-backed capabilities remain unavailable until explicitly enabled.
+servers:
+  - url: https://vedoy-dev-portal.vercel.app/api
+paths:
+  /v1/health:
+    get:
+      summary: Service health
+      security: []
+      responses:
+        '200': { description: API is reachable }
+  /v1/projects:
+    get:
+      summary: List projects owned by the signed-in user
+      security: [{ supabaseUser: [] }]
+      responses:
+        '200': { description: Project list }
+    post:
+      summary: Create a developer project
+      security: [{ supabaseUser: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                slug: { type: string }
+      responses:
+        '201': { description: Project created }
+  /v1/projects/{projectId}/api-keys:
+    post:
+      summary: Create an API key and return the secret once
+      security: [{ supabaseUser: [] }]
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: API key created }
+  /v1/models:
+    get:
+      summary: List available model routes
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Model route catalog }
+        '429': { description: Rate limit exceeded }
+  /v1/usage:
+    get:
+      summary: List recent usage for the signed-in user's projects
+      security: [{ supabaseUser: [] }]
+      responses:
+        '200': { description: Usage events }
+  /v1/credits/balance:
+    get:
+      summary: Get project credit balances
+      security: [{ supabaseUser: [] }]
+      responses:
+        '200': { description: Credit balances }
+components:
+  securitySchemes:
+    supabaseUser:
+      type: http
+      scheme: bearer
+      bearerFormat: Supabase JWT
+    vedoyApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: vdy_live_...

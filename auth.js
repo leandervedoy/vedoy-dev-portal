@@ -58,6 +58,7 @@
   client = window.supabase.createClient(config.url, config.publishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
+  window.vedoySupabase = client;
 
   async function updateAccount(user) {
     if (!user) { setSession(null); return; }
