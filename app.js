@@ -18,7 +18,7 @@ const pages={
   identity:{title:"Identity API",label:"API REFERENCE / IDENTITY",lead:"Identity is the foundation for sign-in, people and teams across the Vedøy ecosystem."},
   find:{title:"Find API",label:"API REFERENCE / FIND",lead:"Build search and discovery into your product with Vedøy Find."},
   ai:{title:"Vedøy AI API",label:"API REFERENCE / AI",lead:"Bring AI capabilities into your product through a Vedøy-owned, provider-agnostic interface."},
-  "developer-api":{title:"Vedøy AI Developer API",label:"DEVELOPER API / BETA",lead:"Create keys, inspect the API contract and run your Vedøy agents from trusted server applications."},
+  "developer-api":{title:"Vedøy Developer API",label:"PLATFORM API / CONTROL PLANE",lead:"Create projects and keys, inspect the API contract, and track usage and Vedøy Credits from one trusted control plane."},
   canvas:{title:"Canvas API",label:"API REFERENCE / CANVAS",lead:"Create visual workspaces for boards, frames and collaborative making."},
   sites:{title:"Sites API",label:"API REFERENCE / SITES",lead:"Work with websites and publishing flows across the Vedøy ecosystem."},
   sdks:{title:"SDKs & tools",label:"MORE / TOOLING",lead:"A home for developer tools, libraries and examples as the Vedøy platform grows."},
