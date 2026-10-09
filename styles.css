@@ -230,6 +230,17 @@ html[data-theme="dark"] .availability-card strong{color:#e4f2ee}
 html[data-theme="dark"] .availability-card p{color:#aabcc2}
 html[data-theme="dark"] .doc-callout{background:#132b27;border-color:#315447;color:#bdd9cc}
 html[data-theme="dark"] .doc-callout strong{color:#a5f1ce}
+
+/* Neutral information styling: status notes should not look like green success states. */
+::selection{background:#9bcfe0;color:#071827}
+.doc-callout,
+html[data-theme="dark"] .doc-callout{
+  background:#122332;
+  border-color:#345064;
+  color:#b8cad4;
+}
+.doc-callout strong,
+html[data-theme="dark"] .doc-callout strong{color:#edf6f7}
 html[data-theme="dark"] .doc-view pre,html[data-theme="dark"] .endpoint-result{background:#081721;border-color:#29404e;color:#d9e9eb}
 html[data-theme="dark"] .doc-table th,html[data-theme="dark"] .doc-table td{border-color:#304550;color:#b4c5ca}
 html[data-theme="dark"] .doc-table code{color:#9fe6c7}
