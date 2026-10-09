@@ -364,6 +364,9 @@ html[data-theme="dark"] .api-estimator .estimator-copy .overline{color:#6edcf7!i
 .api-estimator .estimator-copy ul,
 html[data-theme="dark"] .api-estimator .estimator-copy ul{color:#d3e4e9!important}
 .api-estimator .estimator-copy li:before{background:#66d9f5;color:#092031;box-shadow:0 0 0 4px #66d9f514}
+.api-base-link{display:inline-flex;align-items:center;gap:10px;margin:8px 0 24px;padding:10px 13px;border:1px solid #3c667b;border-radius:8px;background:#0b1d2b;color:#c9eaf3!important;font:10px var(--mono);letter-spacing:.02em;text-decoration:none;overflow-wrap:anywhere}
+.api-base-link span{color:#67d8f4;font-size:8px;letter-spacing:.13em}
+.api-base-link:hover{border-color:#74dff7;background:#102c3c}
 .estimator-card{border-color:#42697b;background:linear-gradient(155deg,#102c42,#0a1b2b);box-shadow:0 22px 46px #00000040}
 .estimator-heading{padding-bottom:16px;border-bottom:1px solid #ffffff14}
 .estimator-heading strong{font-size:22px;color:#f3f8fa}
