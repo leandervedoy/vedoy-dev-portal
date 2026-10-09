@@ -116,6 +116,106 @@ paths:
         '402': { description: Insufficient Vedøy Credits }
         '403': { description: The sending number is not owned by the project }
         '409': { description: Existing provider operation is pending or requires reconciliation }
+  /v1/webhooks/endpoints:
+    get:
+      summary: List project webhook endpoints
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Endpoint list without signing secrets }
+    post:
+      summary: Create a signed HTTPS webhook endpoint
+      security: [{ vedoyApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url: { type: string, format: uri, pattern: '^https://' }
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { type: string }
+                description: { type: string, maxLength: 240 }
+      responses:
+        '201': { description: Endpoint created; signingSecret is returned once }
+        '422': { description: Invalid URL or event list }
+        '503': { description: Webhook signing is not configured }
+  /v1/webhooks/deliveries:
+    get:
+      summary: List recent webhook delivery attempts
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Up to 100 recent delivery attempts }
+  /v1/webhooks/deliveries/{deliveryId}/retry:
+    post:
+      summary: Retry one webhook delivery
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - in: path
+          name: deliveryId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202': { description: Retry attempted and recorded }
+        '404': { description: Delivery not found }
+        '409': { description: Endpoint is disabled }
+  /v1/agents:
+    get:
+      summary: List saved agents in the project
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Agent configuration list }
+    post:
+      summary: Create an agent configuration with a budget guard
+      security: [{ vedoyApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                instructions: { type: string, maxLength: 16000 }
+                model: { type: string, default: vedoy/router }
+                monthlyBudgetMicrounits: { type: integer, minimum: 0 }
+                status: { type: string, enum: [draft, active], default: draft }
+                metadata: { type: object }
+      responses:
+        '201': { description: Agent saved }
+  /v1/agents/{agentId}/runs:
+    get:
+      summary: List recent runs for an agent
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Agent run list }
+    post:
+      summary: Request an agent run
+      description: The run is recorded as blocked until a server-side agent runner is configured.
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - in: path
+          name: agentId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '503': { description: Agent runner is not configured; blocked run is recorded }
   /v1/usage:
     get:
       summary: List recent usage for the signed-in user's projects

@@ -9,6 +9,8 @@ The canonical developer site and API surface for Vedøy. Vedøy Phone is separat
 - `/api/v1` Vercel Function API
 - Developer projects and one-time API key creation
 - PostgreSQL-backed rate limits, usage events and Vedøy Credits ledger
+- Vedøy Notify webhook endpoints, signed delivery attempts and explicit retry history
+- Stored agent definitions, budget guards and run history with a fail-closed provider boundary
 - Portable PostgreSQL schema for Neon now and Norwegian hosting later
 - OpenAPI 3.1 contract in `openapi.yaml`
 
@@ -22,8 +24,9 @@ Telnyx number search, number purchase and outbound SMS are implemented behind Ve
 4. Run `npm run db:migrate` once with the direct connection.
 5. Configure `TELNYX_API_KEY`, the Telnyx webhook public key and the messaging profile ID on the server.
 6. Configure `TELNYX_SMS_PROVIDER_USD_MICROS` from the applicable Telnyx tariff before enabling SMS.
-7. Run `npx vercel dev` so the static frontend and `/api` functions share one origin.
-8. Run `npm run check` before committing.
+7. Set `VEDOY_WEBHOOK_SIGNING_SECRET` to a random server-only value of at least 32 characters before creating webhooks.
+8. Run `npx vercel dev` so the static frontend and `/api` functions share one origin.
+9. Run `npm run check` before committing.
 
 The browser receives only the Supabase publishable key. PostgreSQL credentials stay in Vercel Functions. Never commit database URLs, service-role keys, carrier credentials or provider secrets.
 
@@ -45,6 +48,11 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
 - `POST /v1/messages`
+- `GET|POST /v1/webhooks/endpoints`
+- `GET /v1/webhooks/deliveries`
+- `POST /v1/webhooks/deliveries/{deliveryId}/retry`
+- `GET|POST /v1/agents`
+- `GET|POST /v1/agents/{agentId}/runs`
 - `GET /v1/usage`
 - `GET /v1/credits/balance`
 
@@ -53,5 +61,13 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 `VEDOY_GROSS_MARGIN_BPS=2000` targets a 20% gross margin. Customer price is calculated as provider cost divided by `0.80`, then rounded up to whole Vedøy Credits using `VEDOY_CREDIT_USD_MICROS` (default: USD 0.01 per Credit). This is a margin calculation, not a 20% markup. Number quotes use current Telnyx inventory costs and expire after ten minutes. SMS is disabled until an explicit provider cost is configured because destination and carrier fees vary.
 
 Provider operations require an `Idempotency-Key`. Credits are reserved before Telnyx is called. Deterministic failures receive an automatic ledger refund; timeouts and provider 5xx responses are marked `unknown` for reconciliation rather than being retried blindly.
+
+## Notify webhooks
+
+Webhook destinations must be public HTTPS URLs; local and private-network targets are rejected. Each endpoint receives a unique HMAC signing secret when created. The secret is derived server-side from `VEDOY_WEBHOOK_SIGNING_SECRET`, is not stored in the database, and is returned only in the creation response. Delivery attempts, response status, a bounded response excerpt and manual retries are stored in PostgreSQL.
+
+## Agents
+
+Agent definitions and runs are project-scoped. The control plane stores instructions, model selection, status and a monthly budget guard. Runs fail closed as `blocked` with `agent_runner_not_configured` until a reviewed server-side runner and provider billing adapter are connected; the portal does not silently make an AI provider call.
 
 See `openapi.yaml` for the complete current contract.

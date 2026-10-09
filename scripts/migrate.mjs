@@ -7,6 +7,7 @@ if (!connectionString) throw new Error("Set DATABASE_URL_UNPOOLED or DATABASE_UR
 const migrations = [
   "001_developer_platform.sql",
   "002_telnyx_commerce.sql",
+  "003_webhooks_and_agents.sql",
 ];
 const client = new pg.Client({
   connectionString,

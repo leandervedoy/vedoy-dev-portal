@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { query, transaction } from "../lib/database.js";
+import { deliverWebhook, emitWebhookEvent, webhookEndpointSecret } from "../lib/webhooks.js";
 import {
   normalizeAvailableNumber,
   pricingConfiguration,
@@ -139,6 +140,23 @@ function requireIdempotencyKey(req) {
   return value;
 }
 
+function validWebhookUrl(value) {
+  let url;
+  try { url = new URL(String(value || "")); } catch { return null; }
+  const host = url.hostname.toLowerCase();
+  const local = host === "localhost" || host.endsWith(".local") || host === "0.0.0.0" || host === "::1" || /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  return url.protocol === "https:" && !local ? url.toString() : null;
+}
+
+function webhookEvents(input) {
+  const values = Array.isArray(input) ? input : [input || "*"];
+  const events = [...new Set(values.map(value => String(value).trim().toLowerCase()).filter(value => value === "*" || /^[a-z0-9_.-]{3,120}$/.test(value)))];
+  if (!events.length || events.length > 50) {
+    throw Object.assign(new Error("events must contain 1–50 valid event names."), { status: 422, code: "invalid_webhook_events" });
+  }
+  return events;
+}
+
 function publicOperation(operation) {
   return {
     id: operation.id,
@@ -251,6 +269,116 @@ export default async function handler(req, res) {
       const wallets = await query(`select b.project_id,b.balance_microunits,b.updated_at from developer_wallet_balances b join developer_projects p on p.id = b.project_id where p.owner_id = $1`, [user.id]);
       return send(res, 200, { data: wallets.rows });
     }
+    if (req.method === "GET" && path === "/v1/webhooks/endpoints") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const endpoints = await query(
+        `select id,url,events,enabled,description,created_at,updated_at
+           from developer_webhook_endpoints where project_id=$1 order by created_at desc`,
+        [auth.project_id],
+      );
+      return send(res, 200, { data: endpoints.rows }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/webhooks/endpoints") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const url = validWebhookUrl(input.url);
+      if (!url) return send(res, 422, { error: { code: "invalid_webhook_url", message: "Webhook URLs must use public HTTPS and cannot point at a local network." } });
+      const events = webhookEvents(input.events);
+      webhookEndpointSecret("configuration-check");
+      const endpoint = await query(
+        `insert into developer_webhook_endpoints (project_id,url,events,description)
+         values ($1,$2,$3::text[],$4) returning id,url,events,enabled,description,created_at,updated_at`,
+        [auth.project_id, url, events, String(input.description || "").trim().slice(0, 240) || null],
+      );
+      const created = endpoint.rows[0];
+      return send(res, 201, {
+        data: { ...created, signingSecret: webhookEndpointSecret(created.id) },
+        warning: "Copy signingSecret now. It is derived server-side and will not be returned again.",
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "GET" && path === "/v1/webhooks/deliveries") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const rows = await query(
+        `select d.id,d.attempt,d.status,d.response_status,d.response_excerpt,d.delivered_at,d.created_at,
+                e.id as event_id,e.event_type,e.payload,e.created_at as event_created_at,
+                ep.id as endpoint_id,ep.url
+           from developer_webhook_deliveries d
+           join developer_webhook_events e on e.id=d.event_id
+           join developer_webhook_endpoints ep on ep.id=d.endpoint_id
+          where e.project_id=$1 order by d.created_at desc limit 100`,
+        [auth.project_id],
+      );
+      return send(res, 200, { data: rows.rows }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    const deliveryRetry = path.match(/^\/v1\/webhooks\/deliveries\/([0-9a-f-]+)\/retry$/i);
+    if (req.method === "POST" && deliveryRetry) {
+      const auth = await authorizeApiKey(req, path, 0);
+      const existing = await query(
+        `select d.*,e.id as event_id,e.project_id,e.event_type,e.payload,e.source,e.created_at as event_created_at,
+                ep.id as endpoint_id,ep.url,ep.events,ep.enabled
+           from developer_webhook_deliveries d
+           join developer_webhook_events e on e.id=d.event_id
+           join developer_webhook_endpoints ep on ep.id=d.endpoint_id
+          where d.id=$1 and e.project_id=$2`,
+        [deliveryRetry[1], auth.project_id],
+      );
+      if (!existing.rowCount) return send(res, 404, { error: { code: "delivery_not_found", message: "Webhook delivery not found." } });
+      const item = existing.rows[0];
+      if (!item.enabled) return send(res, 409, { error: { code: "endpoint_disabled", message: "Enable this endpoint before retrying a delivery." } });
+      const delivery = await deliverWebhook({ id: item.event_id, event_type: item.event_type, payload: item.payload, created_at: item.event_created_at }, { id: item.endpoint_id, url: item.url }, item.attempt + 1);
+      return send(res, 202, { data: delivery }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "GET" && path === "/v1/agents") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const agents = await query(
+        `select id,name,instructions,model,monthly_budget_microunits,status,metadata,created_at,updated_at
+           from developer_agents where project_id=$1 order by created_at desc`,
+        [auth.project_id],
+      );
+      return send(res, 200, { data: agents.rows }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/agents") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const name = String(input.name || "").trim();
+      if (name.length < 2 || name.length > 120) return send(res, 422, { error: { code: "invalid_agent_name", message: "name must contain 2–120 characters." } });
+      const budget = Number(input.monthlyBudgetMicrounits || 0);
+      if (!Number.isSafeInteger(budget) || budget < 0) return send(res, 422, { error: { code: "invalid_agent_budget", message: "monthlyBudgetMicrounits must be a non-negative integer." } });
+      const agent = await query(
+        `insert into developer_agents (project_id,name,instructions,model,monthly_budget_microunits,status,metadata)
+         values ($1,$2,$3,$4,$5,$6,$7::jsonb)
+         returning id,name,instructions,model,monthly_budget_microunits,status,metadata,created_at,updated_at`,
+        [auth.project_id, name, String(input.instructions || "").slice(0, 16_000), String(input.model || "vedoy/router").slice(0, 160), budget, input.status === "active" ? "active" : "draft", JSON.stringify(input.metadata && typeof input.metadata === "object" ? input.metadata : {})],
+      );
+      return send(res, 201, { data: agent.rows[0] }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    const agentRuns = path.match(/^\/v1\/agents\/([0-9a-f-]+)\/runs$/i);
+    if (agentRuns && req.method === "GET") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const runs = await query(
+        `select r.id,r.status,r.input,r.output,r.error_code,r.error_message,r.cost_microunits,r.created_at,r.updated_at
+           from developer_agent_runs r join developer_agents a on a.id=r.agent_id
+          where r.agent_id=$1 and a.project_id=$2 order by r.created_at desc limit 100`,
+        [agentRuns[1], auth.project_id],
+      );
+      return send(res, 200, { data: runs.rows }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (agentRuns && req.method === "POST") {
+      const idempotencyKey = requireIdempotencyKey(req);
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const agent = await query("select * from developer_agents where id=$1 and project_id=$2", [agentRuns[1], auth.project_id]);
+      if (!agent.rowCount) return send(res, 404, { error: { code: "agent_not_found", message: "Agent not found." } });
+      if (agent.rows[0].status !== "active") return send(res, 409, { error: { code: "agent_not_active", message: "Activate the agent before starting a run." } });
+      const created = await query(
+        `insert into developer_agent_runs (agent_id,project_id,idempotency_key,status,input,error_code,error_message)
+         values ($1,$2,$3,'blocked',$4::jsonb,'agent_runner_not_configured','No agent runner is configured for this deployment.')
+         on conflict (project_id,idempotency_key) do update set updated_at=developer_agent_runs.updated_at
+         returning *`,
+        [agentRuns[1], auth.project_id, idempotencyKey, JSON.stringify(input || {})],
+      );
+      return send(res, 503, { error: { code: "agent_runner_not_configured", message: "Agent configuration is saved, but no provider runner is configured for this deployment." }, run: created.rows[0] }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
     if (req.method === "GET" && path === "/v1/models") {
       const auth = await authorizeApiKey(req, path, 0);
       return send(res, 200, { data: [{ id: "vedoy/openai", type: "text", status: "preview" }, { id: "vedoy/router", type: "text", status: "planned" }], projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
@@ -345,6 +473,7 @@ export default async function handler(req, res) {
           [auth.project_id, order.id || null, priced.provider_reference, order.status || "pending", priced.metadata?.countryCode || null, priced.metadata?.numberType || null, priced.currency, usdToCreditsMicrounits(Number(priced.customer_recurring_micros), pricing.creditUsdMicros), priced.provider_recurring_micros, JSON.stringify(priced.metadata?.features || [])],
         );
         await finishProviderOperation(reserved.operation, { status: "succeeded", responsePayload: result, providerRequestId: requestId, providerResourceId: order.id, providerCostMicros: Number(priced.provider_upfront_micros) + Number(priced.provider_recurring_micros) });
+        await emitWebhookEvent({ projectId: auth.project_id, eventType: "number_order.created", payload: result, source: "telnyx" }).catch(() => {});
         return send(res, 201, { data: result });
       } catch (error) {
         const status = error.outcomeUnknown ? "unknown" : "failed";
@@ -385,6 +514,7 @@ export default async function handler(req, res) {
           [auth.project_id, message.id || null, from, to, result.status, chargeMicrounits, pricing.smsProviderUsdMicros, message.parts || null],
         );
         await finishProviderOperation(reserved.operation, { status: "succeeded", responsePayload: result, providerRequestId: requestId, providerResourceId: message.id, providerCostMicros: pricing.smsProviderUsdMicros });
+        await emitWebhookEvent({ projectId: auth.project_id, eventType: "message.sent", payload: result, source: "telnyx" }).catch(() => {});
         return send(res, 202, { data: result });
       } catch (error) {
         const status = error.outcomeUnknown ? "unknown" : "failed";

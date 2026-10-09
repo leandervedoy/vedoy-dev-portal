@@ -1,5 +1,6 @@
 import { query } from "../lib/database.js";
 import { verifyTelnyxWebhook } from "../lib/telnyx.js";
+import { emitWebhookEvent } from "../lib/webhooks.js";
 
 export const config = { api: { bodyParser: false } };
 
@@ -20,26 +21,30 @@ async function updateMessage(eventType, payload) {
   const messageId = payload.id || payload.record_type === "message" && payload.id;
   if (!messageId) return;
   const status = payload.to?.[0]?.status || payload.status || eventType.replace("message.", "");
-  await query(
+  const result = await query(
     `update developer_messages
         set status = $2,
             provider_payload = coalesce(provider_payload, '{}'::jsonb) || $3::jsonb,
             updated_at = now()
-      where provider = 'telnyx' and provider_message_id = $1`,
+      where provider = 'telnyx' and provider_message_id = $1
+      returning project_id,provider_message_id,status`,
     [messageId, status, JSON.stringify({ last_event: eventType, payload })],
   );
+  return result.rows[0] || null;
 }
 
 async function updateNumberOrder(eventType, payload) {
   const orderId = payload.id || payload.number_order_id;
   if (!orderId) return;
   const status = payload.status || (eventType.includes("failed") ? "failed" : "active");
-  await query(
+  const result = await query(
     `update developer_phone_numbers
         set status = $2, updated_at = now()
-      where provider = 'telnyx' and provider_order_id = $1`,
+      where provider = 'telnyx' and provider_order_id = $1
+      returning project_id,phone_number,status`,
     [orderId, status],
   );
+  return result.rows[0] || null;
 }
 
 export default async function handler(req, res) {
@@ -74,8 +79,17 @@ export default async function handler(req, res) {
   if (!inserted.rowCount) return res.status(204).end();
 
   try {
-    if (eventType.startsWith("message.")) await updateMessage(eventType, payload);
-    if (eventType.startsWith("number_order.")) await updateNumberOrder(eventType, payload);
+    let resource = null;
+    if (eventType.startsWith("message.")) resource = await updateMessage(eventType, payload);
+    if (eventType.startsWith("number_order.")) resource = await updateNumberOrder(eventType, payload);
+    if (resource?.project_id) {
+      await emitWebhookEvent({
+        projectId: resource.project_id,
+        eventType: eventType.replace(/:/g, ".").toLowerCase(),
+        payload: { provider: "telnyx", resource, event: payload },
+        source: "telnyx",
+      }).catch(() => {});
+    }
     await query(
       `update developer_provider_webhooks
           set processed_at = now()
