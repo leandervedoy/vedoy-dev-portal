@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "npm run check && node scripts/build.mjs",
-    "check": "node --check app.js && node --check auth.js && node --check access.js && node --check developer-console.js && node --check api/[...path].js && node --check api/telnyx-webhook.js && node --check api/v1/numbers.js && node --check api/v1/numbers/available.js && node --check api/v1/numbers/purchase.js && node --check lib/database.js && node --check lib/telnyx.js && node --check lib/webhooks.js && node --check scripts/migrate.mjs",
+    "check": "node --check app.js && node --check auth.js && node --check access.js && node --check developer-console.js && node --check api/[...path].js && node --check api/telnyx-webhook.js && node --check api/v1/models.js && node --check api/v1/numbers.js && node --check api/v1/numbers/available.js && node --check api/v1/numbers/purchase.js && node --check lib/database.js && node --check lib/telnyx.js && node --check lib/webhooks.js && node --check scripts/migrate.mjs",
     "test": "node --test tests/*.test.mjs",
     "db:migrate": "node scripts/migrate.mjs"
   },
