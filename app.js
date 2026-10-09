@@ -222,12 +222,40 @@ function openPage(key,scroll=true){
   results.addEventListener("click",async event=>{const button=event.target.closest("[data-phone-purchase]");if(!button)return;const monthlyPrice=button.dataset.phonePrice,currency=button.dataset.phoneCurrency;if(!monthlyPrice||!currency){toast("This number is missing a verified current price.","error");return;}if(!confirm(`Buy ${button.dataset.phoneNumber} for ${monthlyPrice} ${currency} per month, plus usage?`))return;button.disabled=true;button.textContent="Provisioning…";try{const data=await request("/v1/numbers/purchase",{method:"POST",body:JSON.stringify({phoneNumber:button.dataset.phoneNumber,countryCode:button.dataset.phoneCountry,numberType:button.dataset.phoneType,confirmedMonthlyPrice:monthlyPrice,currency})});button.textContent="Number active ✓";toast(`${data.phoneNumber} is active on your account.`);}catch(error){button.disabled=false;button.textContent="Buy number";toast(error.message,"error");}});
  }
  function addCodeCopyButtons(){
+  visualizeCodeBlocks();
   content.querySelectorAll(".doc-view pre").forEach((block,index)=>{
    if(block.querySelector(".code-copy"))return;
    const button=document.createElement("button");button.className="code-copy";button.type="button";button.textContent="Copy";
    button.setAttribute("aria-label","Copy code example "+(index+1));
    button.addEventListener("click",async()=>{try{const code=block.cloneNode(true);code.querySelector(".code-copy")?.remove();await navigator.clipboard.writeText(code.innerText.trim());button.textContent="Copied ✓";button.dataset.copied="true";}catch{button.textContent="Select code to copy";}window.setTimeout(()=>{button.textContent="Copy";delete button.dataset.copied;},1600);});
    block.append(button);
+  });
+ }
+ function visualizeCodeBlocks(){
+  const escapeHtml=value=>value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const languageFor=code=>{
+   const sample=code.trim();
+   if(/^curl\b/m.test(sample)||/\bcurl\s+https?:\/\//.test(sample))return "CURL";
+   if(/^import\s+requests\b/m.test(sample)||/^def\s+\w+/m.test(sample))return "PYTHON";
+   if(/^openapi:\s*/m.test(sample)||/^paths:\s*$/m.test(sample))return "YAML";
+   if(/^\s*[\[{]/.test(sample)&&/"[^"\n]+"\s*:/.test(sample))return "JSON";
+   if(/\b(?:const|let|await|fetch|function|async)\b/.test(sample))return "JAVASCRIPT";
+   return "CODE";
+  };
+  const tokenPattern=/(\/\/[^\n]*|#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:const|let|var|await|async|new|return|throw|try|catch|if|else|import|from|def|class|with|as|true|false|null|None|True|False)\b|\b\d+(?:\.\d+)?\b)/g;
+  content.querySelectorAll(".doc-view pre").forEach(block=>{
+   if(block.dataset.visualized==="true")return;
+   const source=block.textContent||"";
+   const language=languageFor(source);
+   block.dataset.codeLanguage=language;
+   block.dataset.visualized="true";
+   block.innerHTML=escapeHtml(source).replace(tokenPattern,(token,offset,all)=>{
+    let kind="syntax-keyword";
+    if(token.startsWith("//")||token.startsWith("#"))kind="syntax-comment";
+    else if(token.startsWith('"')||token.startsWith("'"))kind=/^\s*:/.test(all.slice(offset+token.length))?"syntax-property":"syntax-string";
+    else if(/^\d/.test(token))kind="syntax-number";
+    return '<span class="'+kind+'">'+token+'</span>';
+   });
   });
  }
  document.addEventListener("click",e=>{const link=e.target.closest("a[data-page],a[href^='#']");if(!link)return;const key=link.dataset.page||link.getAttribute("href")?.slice(1);if(!pages[key])return;e.preventDefault();e.stopPropagation();closeMenu();if(missionEntry&&!missionEntry.hidden){leaveMission(key);return;}openPage(key);history.replaceState(null,"",`#${key}`);});
