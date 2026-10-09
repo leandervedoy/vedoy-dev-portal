@@ -327,6 +327,55 @@ html[data-theme="dark"] .phone-provisioner{background:linear-gradient(135deg,#0a
   .estimate-results{grid-template-columns:1fr}
   .endpoint-meta{flex-wrap:wrap}
 }
+
+/* Pricing calculator: a single dark control surface, built for direct interaction. */
+.api-estimator{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  grid-template-columns:minmax(0,.84fr) minmax(340px,1.16fr);
+  gap:clamp(26px,4vw,58px);
+  padding:clamp(28px,4vw,52px);
+  border:1px solid #2a5269;
+  border-radius:28px;
+  background:
+    radial-gradient(circle at 0% 0%,#1f526633,transparent 37%),
+    radial-gradient(circle at 92% 100%,#0d8da122,transparent 34%),
+    linear-gradient(145deg,#0b1b29,#0d293a 58%,#091824);
+  box-shadow:0 26px 70px #00000035;
+  user-select:none;
+}
+.api-estimator::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  opacity:.35;
+  background-image:linear-gradient(#80c8d30e 1px,transparent 1px),linear-gradient(90deg,#80c8d30e 1px,transparent 1px);
+  background-size:24px 24px;
+  mask-image:linear-gradient(120deg,#000,transparent 76%);
+}
+.api-estimator .estimator-copy h2,
+html[data-theme="dark"] .api-estimator .estimator-copy h2{color:#f2f8fa!important;font-size:clamp(34px,4.4vw,56px);line-height:.96}
+.api-estimator .estimator-copy>p,
+html[data-theme="dark"] .api-estimator .estimator-copy>p{color:#adc5cf!important;font-size:13px;line-height:1.8}
+.api-estimator .estimator-copy .overline,
+html[data-theme="dark"] .api-estimator .estimator-copy .overline{color:#6edcf7!important}
+.api-estimator .estimator-copy ul,
+html[data-theme="dark"] .api-estimator .estimator-copy ul{color:#d3e4e9!important}
+.api-estimator .estimator-copy li:before{background:#66d9f5;color:#092031;box-shadow:0 0 0 4px #66d9f514}
+.estimator-card{border-color:#42697b;background:linear-gradient(155deg,#102c42,#0a1b2b);box-shadow:0 22px 46px #00000040}
+.estimator-heading{padding-bottom:16px;border-bottom:1px solid #ffffff14}
+.estimator-heading strong{font-size:22px;color:#f3f8fa}
+.estimator-card label{padding:10px 0;margin:5px 0;border-bottom:1px solid #ffffff0b}
+.estimator-card input[type=range]{accent-color:#64d7f4}
+.estimate-results>div,.estimate-saving{background:#ffffff0a;border-color:#7ecce31f}
+.estimate-saving{background:linear-gradient(110deg,#103c4a,#123246)}
+.estimate-saving strong{color:#72dff5}
+@media(max-width:760px){
+  .api-estimator{grid-template-columns:1fr;padding:24px;border-radius:22px}
+  .api-estimator .estimator-copy h2{font-size:clamp(34px,11vw,48px)}
+}
 /* Some browsers report split-view tablets with a wider CSS viewport than their pixels.
    Switch to the drawer shell early enough and never let the document grow sideways. */
 html,body{max-width:100%;overflow-x:hidden}
