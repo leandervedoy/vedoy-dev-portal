@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Vedøy Developer API
-  version: 2026-10-08
-  description: Canonical API surface for Vedøy developer products. Provider-backed capabilities remain unavailable until explicitly enabled.
+  version: 2026-10-09
+  description: Canonical API surface for Vedøy developer products, including Telnyx-backed numbers and SMS sold in Vedøy Credits.
 servers:
   - url: https://vedoy-dev-portal.vercel.app/api
 paths:
@@ -51,6 +51,71 @@ paths:
       responses:
         '200': { description: Model route catalog }
         '429': { description: Rate limit exceeded }
+  /v1/numbers/available:
+    get:
+      summary: Search live Telnyx number inventory and create short-lived Vedøy quotes
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - in: query
+          name: country
+          schema: { type: string, pattern: '^[A-Z]{2}$', default: NO }
+        - in: query
+          name: type
+          schema: { type: string, enum: [local, toll_free, mobile, national, shared_cost], default: local }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 20, default: 10 }
+      responses:
+        '200': { description: Current customer prices and quote IDs }
+        '503': { description: Telnyx is not configured }
+  /v1/numbers:
+    get:
+      summary: List numbers owned by the API-key project
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Project number list }
+  /v1/numbers/purchase:
+    post:
+      summary: Purchase a quoted number through Telnyx
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quoteId]
+              properties:
+                quoteId: { type: string, format: uuid }
+      responses:
+        '201': { description: Number order accepted }
+        '402': { description: Insufficient Vedøy Credits }
+        '409': { description: Existing provider operation is pending or requires reconciliation }
+        '410': { description: Quote expired }
+  /v1/messages:
+    post:
+      summary: Send an SMS from a project-owned number through Telnyx
+      security: [{ vedoyApiKey: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to, text]
+              properties:
+                from: { type: string, pattern: '^\\+[1-9]\\d{6,14}$' }
+                to: { type: string, pattern: '^\\+[1-9]\\d{6,14}$' }
+                text: { type: string, minLength: 1, maxLength: 1600 }
+      responses:
+        '202': { description: Message accepted }
+        '402': { description: Insufficient Vedøy Credits }
+        '403': { description: The sending number is not owned by the project }
+        '409': { description: Existing provider operation is pending or requires reconciliation }
   /v1/usage:
     get:
       summary: List recent usage for the signed-in user's projects
@@ -64,6 +129,13 @@ paths:
       responses:
         '200': { description: Credit balances }
 components:
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+      description: Stable unique key for this intended provider operation. Reuse it after a timeout.
   securitySchemes:
     supabaseUser:
       type: http
