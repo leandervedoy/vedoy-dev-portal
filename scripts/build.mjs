@@ -16,3 +16,4 @@ await rm("public", { recursive: true, force: true });
 await mkdir("public", { recursive: true });
 await Promise.all(files.map(file => cp(file, `public/${file}`)));
 await cp("assets", "public/assets", { recursive: true });
+await cp("icons", "public/icons", { recursive: true });
