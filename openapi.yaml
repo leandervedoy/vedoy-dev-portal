@@ -51,6 +51,7 @@ paths:
       responses:
         '200': { description: Model route catalog }
         '429': { description: Rate limit exceeded }
+<<<<<<< Updated upstream
   /v1/numbers/available:
     get:
       summary: Search live Telnyx number inventory and create short-lived Vedøy quotes
@@ -80,12 +81,20 @@ paths:
       security: [{ vedoyApiKey: [] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+=======
+  /v1/chat/completions:
+    post:
+      summary: Free chat completion (demo)
+      description: Free demo endpoint that echoes the last message. No credits consumed.
+      security: [{ vedoyApiKey: [] }]
+>>>>>>> Stashed changes
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+<<<<<<< Updated upstream
               required: [quoteId]
               properties:
                 quoteId: { type: string, format: uuid }
@@ -100,12 +109,33 @@ paths:
       security: [{ vedoyApiKey: [] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+=======
+              required: [messages]
+              properties:
+                model: { type: string, default: "vedoy/chat" }
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role: { type: string }
+                      content: { type: string }
+      responses:
+        '200': { description: Chat completion response }
+        '429': { description: Rate limit exceeded }
+  /v1/embeddings:
+    post:
+      summary: Free embeddings (demo)
+      description: Free demo endpoint that returns random embeddings. No credits consumed.
+      security: [{ vedoyApiKey: [] }]
+>>>>>>> Stashed changes
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+<<<<<<< Updated upstream
               required: [from, to, text]
               properties:
                 from: { type: string, pattern: '^\\+[1-9]\\d{6,14}$' }
@@ -116,6 +146,7 @@ paths:
         '402': { description: Insufficient Vedøy Credits }
         '403': { description: The sending number is not owned by the project }
         '409': { description: Existing provider operation is pending or requires reconciliation }
+<<<<<<< Updated upstream
   /v1/webhooks/endpoints:
     get:
       summary: List project webhook endpoints
@@ -216,6 +247,55 @@ paths:
             schema: { type: object }
       responses:
         '503': { description: Agent runner is not configured; blocked run is recorded }
+=======
+=======
+              required: [input]
+              properties:
+                model: { type: string, default: "vedoy/embeddings" }
+                input: { type: string }
+      responses:
+        '200': { description: Embedding response }
+        '429': { description: Rate limit exceeded }
+  /v1/credits/transactions:
+    get:
+      summary: List credit transactions
+      security: [{ supabaseUser: [] }]
+      responses:
+        '200': { description: Credit transaction history }
+  /v1/projects/{projectId}/api-keys:
+    get:
+      summary: List API keys for a project
+      security: [{ supabaseUser: [] }]
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: API key list }
+    delete:
+      summary: Revoke an API key
+      security: [{ supabaseUser: [] }]
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: keyId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Revoked key }
+  /v1/rate-limits:
+    get:
+      summary: Get current rate limit status
+      security: [{ vedoyApiKey: [] }]
+      responses:
+        '200': { description: Rate limit status }
+        '429': { description: Rate limit exceeded }
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
   /v1/usage:
     get:
       summary: List recent usage for the signed-in user's projects

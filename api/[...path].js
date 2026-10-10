@@ -381,6 +381,7 @@ export default async function handler(req, res) {
     }
     if (req.method === "GET" && path === "/v1/models") {
       const auth = await authorizeApiKey(req, path, 0);
+<<<<<<< Updated upstream
       return send(res, 200, { data: [{ id: "vedoy/openai", type: "text", status: "preview" }, { id: "vedoy/router", type: "text", status: "planned" }], projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/numbers/available") {
@@ -396,6 +397,100 @@ export default async function handler(req, res) {
         "filter[phone_number_type]": numberType,
         "filter[limit]": String(limit),
         "filter[best_effort]": "false",
+=======
+      return send(res, 200, {
+        data: [
+          { id: "vedoy/openai", type: "text", status: "preview", context_window: 128000, max_output: 4096 },
+          { id: "vedoy/router", type: "text", status: "planned", context_window: 256000, max_output: 8192 },
+          { id: "vedoy/embeddings", type: "embedding", status: "preview", dimensions: 1536 },
+          { id: "vedoy/chat", type: "chat", status: "preview", context_window: 128000, max_output: 4096 },
+        ],
+        projectId: auth.project_id,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/chat/completions") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const messages = Array.isArray(input.messages) ? input.messages : [];
+      if (!messages.length) {
+        return send(res, 422, { error: { code: "invalid_messages", message: "At least one message is required." } });
+      }
+      const lastMessage = messages[messages.length - 1];
+      const responseContent = `Vedøy API response: You said "${String(lastMessage.content || "").slice(0, 200)}". This is a free demo endpoint.`;
+      return send(res, 200, {
+        id: `chatcmpl-${randomBytes(12).toString("hex")}`,
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: input.model || "vedoy/chat",
+        choices: [{
+          index: 0,
+          message: { role: "assistant", content: responseContent },
+          finish_reason: "stop",
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        projectId: auth.project_id,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/embeddings") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const text = String(input.input || input.text || "").trim();
+      if (!text) {
+        return send(res, 422, { error: { code: "invalid_input", message: "Input text is required." } });
+      }
+      const embedding = Array.from({ length: 1536 }, () => Number((Math.random() * 2 - 1).toFixed(6)));
+      return send(res, 200, {
+        object: "list",
+        data: [{ object: "embedding", index: 0, embedding }],
+        model: input.model || "vedoy/embeddings",
+        usage: { prompt_tokens: 5, total_tokens: 5 },
+        projectId: auth.project_id,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "GET" && path === "/v1/credits/transactions") {
+      const token = requireUser(req);
+      const transactions = await supabase("developer_ledger_entries", {
+        token,
+        query: { select: "id,project_id,amount_microunits,entry_type,description,created_at", order: "created_at.desc", limit: "100" },
+      });
+      return send(res, 200, { data: transactions });
+    }
+    const apiKeysMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys$/i);
+    if (req.method === "GET" && apiKeysMatch) {
+      const token = requireUser(req);
+      const keys = await supabase("developer_api_keys", {
+        token,
+        query: { select: "id,name,key_prefix,last_used_at,expires_at,revoked_at,created_at", project_id: `eq.${apiKeysMatch[1]}`, order: "created_at.desc" },
+      });
+      return send(res, 200, { data: keys });
+    }
+    const revokeKeyMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys\/([0-9a-f-]+)$/i);
+    if (req.method === "DELETE" && revokeKeyMatch) {
+      const token = requireUser(req);
+      const keys = await supabase("developer_api_keys", {
+        token,
+        method: "PATCH",
+        prefer: "return=representation",
+        query: { id: `eq.${revokeKeyMatch[2]}`, project_id: `eq.${revokeKeyMatch[1]}` },
+        payload: { revoked_at: new Date().toISOString() },
+      });
+      return send(res, 200, { data: keys?.[0] || null });
+    }
+    if (req.method === "GET" && path === "/v1/rate-limits") {
+      const auth = await authorizeApiKey(req, path, 0);
+      return send(res, 200, {
+        projectId: auth.project_id,
+        rate_limit_per_minute: auth.remaining_requests,
+        remaining_requests: auth.remaining_requests,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (path.startsWith("/v1/")) {
+      return send(res, 501, {
+        error: {
+          code: "capability_not_configured",
+          message: "This API contract is documented, but its provider-backed implementation is not enabled yet.",
+        },
+>>>>>>> Stashed changes
       });
       params.append("filter[features]", "sms");
       params.append("filter[features]", "voice");

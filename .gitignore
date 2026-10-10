@@ -6,4 +6,8 @@ node_modules/
 public/
 developer-portal/
 _vercel-static/
+<<<<<<< Updated upstream
 .neon
+=======
+.env*
+>>>>>>> Stashed changes

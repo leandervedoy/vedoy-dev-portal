@@ -43,7 +43,10 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/health`
 - `GET|POST /v1/projects`
 - `POST /v1/projects/{projectId}/api-keys`
+- `GET /v1/projects/{projectId}/api-keys`
+- `DELETE /v1/projects/{projectId}/api-keys/{keyId}`
 - `GET /v1/models`
+<<<<<<< Updated upstream
 - `GET /v1/numbers/available`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
@@ -55,6 +58,8 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET|POST /v1/agents/{agentId}/runs`
 - `GET /v1/usage`
 - `GET /v1/credits/balance`
+- `GET /v1/credits/transactions`
+- `GET /v1/rate-limits`
 
 ## Telnyx pricing
 
