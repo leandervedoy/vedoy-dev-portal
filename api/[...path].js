@@ -227,8 +227,27 @@ export default async function handler(req, res) {
   try {
     if (req.method === "OPTIONS") return send(res, 204, {});
     if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
-      const database = await query("select current_database() as name");
-      return send(res, 200, { ok: true, service: "vedoy-developer-api", version: API_VERSION, database: { provider: process.env.DATABASE_PROVIDER || "postgresql", connected: true, name: database.rows[0].name }, providers: { telnyx: telnyxConfigured() ? "configured" : "not_configured" }, docs: "/openapi.yaml" });
+      const database = await query(
+        `select current_database() as name,
+          to_regclass('public.developer_provider_quotes') is not null as quotes_ready,
+          to_regclass('public.developer_phone_numbers') is not null as numbers_ready,
+          to_regclass('public.developer_provider_operations') is not null as operations_ready,
+          to_regclass('public.developer_wallet_balances') is not null as wallets_ready`,
+      );
+      const pricing = pricingConfiguration();
+      const schemaReady = Object.entries(database.rows[0]).filter(([key]) => key.endsWith("_ready")).every(([, ready]) => ready);
+      const telnyxReady = telnyxConfigured();
+      return send(res, 200, {
+        ok: true,
+        service: "vedoy-developer-api",
+        version: API_VERSION,
+        database: { provider: process.env.DATABASE_PROVIDER || "postgresql", connected: true, name: database.rows[0].name },
+        providers: { telnyx: telnyxReady ? "configured" : "not_configured" },
+        capabilities: {
+          phoneNumbers: { ready: telnyxReady && schemaReady, schemaReady, grossMarginBps: pricing.grossMarginBps },
+        },
+        docs: "/openapi.yaml",
+      });
     }
     if (req.method === "GET" && path === "/v1/projects") {
       const user = await requireUser(req);
@@ -389,7 +408,9 @@ export default async function handler(req, res) {
       const url = requestUrl(req);
       const country = String(url.searchParams.get("country") || "NO").toUpperCase();
       const numberType = String(url.searchParams.get("type") || "local").toLowerCase();
-      const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || 10)));
+      const requestedLimit = Number(url.searchParams.get("limit") || 10);
+      if (!Number.isInteger(requestedLimit) || requestedLimit < 1) return send(res, 422, { error: { code: "invalid_limit", message: "limit must be a positive integer." } });
+      const limit = Math.min(20, requestedLimit);
       if (!/^[A-Z]{2}$/.test(country)) return send(res, 422, { error: { code: "invalid_country", message: "country must be an ISO 3166-1 alpha-2 code." } });
       if (!new Set(["local", "toll_free", "mobile", "national", "shared_cost"]).has(numberType)) return send(res, 422, { error: { code: "invalid_number_type", message: "Unsupported phone number type." } });
       const params = new URLSearchParams({
@@ -496,20 +517,45 @@ export default async function handler(req, res) {
       params.append("filter[features]", "voice");
       const { payload } = await telnyxRequest(`/available_phone_numbers?${params}`);
       const pricing = pricingConfiguration();
-      const numbers = [];
-      for (const raw of payload.data || []) {
-        const item = normalizeAvailableNumber(raw, pricing);
-        if (!item.phoneNumber || item.currency !== "USD") continue;
-        const quote = await query(
+      let pricedNumbers;
+      try {
+        if (!Array.isArray(payload.data)) {
+          throw Object.assign(new Error("Telnyx returned an invalid available-number response."), { status: 502, code: "invalid_provider_response" });
+        }
+        pricedNumbers = payload.data.map(item => normalizeAvailableNumber(item, pricing))
+          .filter(item => item.phoneNumber && item.currency === "USD");
+      } catch (error) {
+        throw Object.assign(error, { status: error.status || 502, code: error.code || "invalid_provider_pricing" });
+      }
+      const quoteRows = pricedNumbers.length
+        ? await query(
           `insert into developer_provider_quotes
            (project_id,provider,product_type,provider_reference,currency,provider_upfront_micros,provider_recurring_micros,
             customer_upfront_micros,customer_recurring_micros,gross_margin_bps,metadata,expires_at)
-           values ($1,'telnyx','phone_number',$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now()+interval '10 minutes') returning id,expires_at`,
-          [auth.project_id, item.phoneNumber, item.currency, item.providerUpfrontMicros, item.providerMonthlyMicros, item.customerUpfrontMicros, item.customerMonthlyMicros, pricing.grossMarginBps, JSON.stringify({ countryCode: country, numberType, features: item.features })],
-        );
-        numbers.push({
-          quoteId: quote.rows[0].id,
-          expiresAt: quote.rows[0].expires_at,
+           select $1,'telnyx','phone_number',item.phone_number,item.currency,item.provider_upfront_micros,item.provider_monthly_micros,
+                  item.customer_upfront_micros,item.customer_monthly_micros,$3,item.metadata,now()+interval '10 minutes'
+             from jsonb_to_recordset($2::jsonb) as item(
+               phone_number text,currency text,provider_upfront_micros bigint,provider_monthly_micros bigint,
+               customer_upfront_micros bigint,customer_monthly_micros bigint,metadata jsonb
+             )
+           returning id,provider_reference,expires_at`,
+          [auth.project_id, JSON.stringify(pricedNumbers.map(item => ({
+            phone_number: item.phoneNumber,
+            currency: item.currency,
+            provider_upfront_micros: item.providerUpfrontMicros,
+            provider_monthly_micros: item.providerMonthlyMicros,
+            customer_upfront_micros: item.customerUpfrontMicros,
+            customer_monthly_micros: item.customerMonthlyMicros,
+            metadata: { countryCode: country, numberType, features: item.features },
+          }))), pricing.grossMarginBps],
+        )
+        : { rows: [] };
+      const quotesByNumber = new Map(quoteRows.rows.map(quote => [quote.provider_reference, quote]));
+      const numbers = pricedNumbers.map(item => {
+        const quote = quotesByNumber.get(item.phoneNumber);
+        return {
+          quoteId: quote.id,
+          expiresAt: quote.expires_at,
           phoneNumber: item.phoneNumber,
           countryCode: country,
           numberType,
@@ -520,8 +566,8 @@ export default async function handler(req, res) {
             monthlyCredits: item.customerMonthlyCredits,
             grossMarginTarget: pricing.grossMarginBps / 10_000,
           },
-        });
-      }
+        };
+      });
       return send(res, 200, { data: numbers }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/numbers") {

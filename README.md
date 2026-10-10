@@ -30,6 +30,8 @@ Telnyx number search, number purchase and outbound SMS are implemented behind Ve
 
 The browser receives only the Supabase publishable key. PostgreSQL credentials stay in Vercel Functions. Never commit database URLs, service-role keys, carrier credentials or provider secrets.
 
+For deployed number search and purchase, configure `TELNYX_API_KEY`, `DATABASE_URL`, and `VEDOY_GROSS_MARGIN_BPS=2000` in the server environment, then apply the migrations with `DATABASE_URL_UNPOOLED`. `GET /api/v1/health` reports whether Telnyx and the required database schema are ready. Number quotes are priced from Telnyx's current USD cost and expire after ten minutes; purchase charges the upfront cost plus the first month at the quoted customer price.
+
 ## Data residency
 
 The API uses standard PostgreSQL through `pg`; it does not depend on Neon-specific database features. Neon can therefore be used for development or an interim deployment, and the same schema can later run on a managed PostgreSQL service in Norway. Set `DATABASE_PROVIDER=neon` or `DATABASE_PROVIDER=gigahost` so health responses expose the active host without exposing credentials.
