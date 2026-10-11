@@ -49,10 +49,10 @@
     const copy = field("[data-quickstart-copy]");
     const test = field("[data-test-api]");
     if (!command || !copy || !test) return;
-    command.textContent = `curl https://vedoy-dev-portal.vercel.app/api/v1/models \\\n  -H "Authorization: Bearer ${issuedApiKey || "$VEDOY_API_KEY"}"`;
+    command.textContent = `curl https://vedoy-dev-portal.vercel.app/api/v1/models \\\n  -H "Authorization: Bearer $VEDOY_API_KEY"`;
     copy.textContent = issuedApiKey
-      ? "Your new key is inserted below. Copy this command into a server terminal, or test it here."
-      : "Create an API key in step 2 to insert it into this command.";
+      ? "The example keeps a placeholder. Store your key in a trusted server environment; the connection test below uses this tab's key temporarily."
+      : "Set VEDOY_API_KEY in your trusted server environment before running this command.";
     test.disabled = !issuedApiKey;
   }
 

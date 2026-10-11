@@ -14,15 +14,28 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://niedmgyyougvgiiuwcvw.s
 const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_7PrmP1V4enFECw0jfTAiDw_XAXD-xqd";
 const API_VERSION = "2026-10-09";
 
-function send(res, status, payload, headers = {}) {
+function send(res, status, payload, headers = {}, cors = {}) {
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("X-Vedoy-API-Version", API_VERSION);
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type,Idempotency-Key");
+  const origin = Object.hasOwn(cors, "origin") ? cors.origin : "*";
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", cors.methods || "GET,POST,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", cors.headers || "Authorization,Content-Type,Idempotency-Key");
+  }
+  if (cors.varyOrigin) res.setHeader("Vary", "Origin");
   Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
   res.end(JSON.stringify(payload));
+}
+
+function healthCors(req) {
+  return {
+    origin: req.headers.origin === "https://vedoy-phone.vercel.app" ? req.headers.origin : null,
+    methods: "GET, OPTIONS",
+    headers: "Accept, Content-Type",
+    varyOrigin: true,
+  };
 }
 
 async function body(req) {
@@ -82,7 +95,7 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
       );
       if (prior.rowCount) {
         const balance = await client.query("select balance_microunits from developer_wallet_balances where project_id = $1", [key.project_id]);
-        return { allowed: true, reason: "idempotent_replay", project_id: key.project_id, remaining_requests: key.rate_limit_per_minute, balance_microunits: balance.rows[0]?.balance_microunits || 0 };
+        return { allowed: true, reason: "idempotent_replay", project_id: key.project_id, rate_limit_per_minute: key.rate_limit_per_minute, remaining_requests: key.rate_limit_per_minute, balance_microunits: balance.rows[0]?.balance_microunits || 0 };
       }
     }
 
@@ -113,7 +126,7 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
       );
     }
     await client.query("update developer_api_keys set last_used_at = now() where id = $1", [key.api_key_id]);
-    return { allowed: true, reason: "ok", project_id: key.project_id, api_key_id: key.api_key_id, remaining_requests: Math.max(0, key.rate_limit_per_minute - requestCount - 1), balance_microunits: balance - costMicrounits };
+    return { allowed: true, reason: "ok", project_id: key.project_id, api_key_id: key.api_key_id, rate_limit_per_minute: key.rate_limit_per_minute, remaining_requests: Math.max(0, key.rate_limit_per_minute - requestCount - 1), balance_microunits: balance - costMicrounits };
   });
 
   if (!result.allowed) {
@@ -225,7 +238,10 @@ async function finishProviderOperation(operation, { status, responsePayload, err
 export default async function handler(req, res) {
   const path = routePath(req);
   try {
-    if (req.method === "OPTIONS") return send(res, 204, {});
+    if (req.method === "OPTIONS") {
+      if (path === "/v1/health") return send(res, 204, {}, {}, healthCors(req));
+      return send(res, 204, {});
+    }
     if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
       const database = await query(
         `select current_database() as name,
@@ -247,7 +263,7 @@ export default async function handler(req, res) {
           phoneNumbers: { ready: telnyxReady && schemaReady, schemaReady, grossMarginBps: pricing.grossMarginBps },
         },
         docs: "/openapi.yaml",
-      });
+      }, {}, healthCors(req));
     }
     if (req.method === "GET" && path === "/v1/projects") {
       const user = await requireUser(req);
@@ -278,6 +294,29 @@ export default async function handler(req, res) {
       if (!created.rowCount) return send(res, 404, { error: { code: "project_not_found", message: "Project not found." } });
       return send(res, 201, { data: { ...created.rows[0], key: rawKey }, warning: "Copy this key now. It will not be shown again." });
     }
+    if (req.method === "GET" && apiKeyMatch) {
+      const user = await requireUser(req);
+      const keys = await query(
+        `select k.id,k.project_id,k.name,k.key_prefix,k.last_used_at,k.expires_at,k.revoked_at,k.created_at
+           from developer_api_keys k join developer_projects p on p.id=k.project_id
+          where p.id=$1 and p.owner_id=$2 order by k.created_at desc`,
+        [apiKeyMatch[1], user.id],
+      );
+      return send(res, 200, { data: keys.rows });
+    }
+    const revokeKeyMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys\/([0-9a-f-]+)$/i);
+    if (req.method === "DELETE" && revokeKeyMatch) {
+      const user = await requireUser(req);
+      const revoked = await query(
+        `update developer_api_keys k set revoked_at=now()
+           from developer_projects p
+          where k.id=$1 and k.project_id=p.id and p.id=$2 and p.owner_id=$3
+          returning k.id,k.project_id,k.name,k.key_prefix,k.last_used_at,k.expires_at,k.revoked_at,k.created_at`,
+        [revokeKeyMatch[2], revokeKeyMatch[1], user.id],
+      );
+      if (!revoked.rowCount) return send(res, 404, { error: { code: "api_key_not_found", message: "API key not found." } });
+      return send(res, 200, { data: revoked.rows[0] });
+    }
     if (req.method === "GET" && path === "/v1/usage") {
       const user = await requireUser(req);
       const events = await query(`select e.id,e.project_id,e.route,e.method,e.status_code,e.cost_microunits,e.created_at from developer_usage_events e join developer_projects p on p.id = e.project_id where p.owner_id = $1 order by e.created_at desc limit 100`, [user.id]);
@@ -287,6 +326,24 @@ export default async function handler(req, res) {
       const user = await requireUser(req);
       const wallets = await query(`select b.project_id,b.balance_microunits,b.updated_at from developer_wallet_balances b join developer_projects p on p.id = b.project_id where p.owner_id = $1`, [user.id]);
       return send(res, 200, { data: wallets.rows });
+    }
+    if (req.method === "GET" && path === "/v1/credits/transactions") {
+      const user = await requireUser(req);
+      const transactions = await query(
+        `select l.id,l.project_id,l.amount_microunits,l.entry_type,l.description,l.created_at
+           from developer_ledger_entries l join developer_projects p on p.id=l.project_id
+          where p.owner_id=$1 order by l.created_at desc limit 100`,
+        [user.id],
+      );
+      return send(res, 200, { data: transactions.rows });
+    }
+    if (req.method === "GET" && path === "/v1/rate-limits") {
+      const auth = await authorizeApiKey(req, path, 0);
+      return send(res, 200, {
+        projectId: auth.project_id,
+        rate_limit_per_minute: auth.rate_limit_per_minute,
+        remaining_requests: auth.remaining_requests,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/webhooks/endpoints") {
       const auth = await authorizeApiKey(req, path, 0);
@@ -400,8 +457,13 @@ export default async function handler(req, res) {
     }
     if (req.method === "GET" && path === "/v1/models") {
       const auth = await authorizeApiKey(req, path, 0);
-<<<<<<< Updated upstream
-      return send(res, 200, { data: [{ id: "vedoy/openai", type: "text", status: "preview" }, { id: "vedoy/router", type: "text", status: "planned" }], projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+      return send(res, 200, {
+        data: [
+          { id: "vedoy/openai", type: "text", status: "preview" },
+          { id: "vedoy/router", type: "text", status: "planned" },
+        ],
+        projectId: auth.project_id,
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/numbers/available") {
       const auth = await authorizeApiKey(req, path, 0);
@@ -418,100 +480,6 @@ export default async function handler(req, res) {
         "filter[phone_number_type]": numberType,
         "filter[limit]": String(limit),
         "filter[best_effort]": "false",
-=======
-      return send(res, 200, {
-        data: [
-          { id: "vedoy/openai", type: "text", status: "preview", context_window: 128000, max_output: 4096 },
-          { id: "vedoy/router", type: "text", status: "planned", context_window: 256000, max_output: 8192 },
-          { id: "vedoy/embeddings", type: "embedding", status: "preview", dimensions: 1536 },
-          { id: "vedoy/chat", type: "chat", status: "preview", context_window: 128000, max_output: 4096 },
-        ],
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "POST" && path === "/v1/chat/completions") {
-      const auth = await authorizeApiKey(req, path, 0);
-      const input = await body(req);
-      const messages = Array.isArray(input.messages) ? input.messages : [];
-      if (!messages.length) {
-        return send(res, 422, { error: { code: "invalid_messages", message: "At least one message is required." } });
-      }
-      const lastMessage = messages[messages.length - 1];
-      const responseContent = `Vedøy API response: You said "${String(lastMessage.content || "").slice(0, 200)}". This is a free demo endpoint.`;
-      return send(res, 200, {
-        id: `chatcmpl-${randomBytes(12).toString("hex")}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: input.model || "vedoy/chat",
-        choices: [{
-          index: 0,
-          message: { role: "assistant", content: responseContent },
-          finish_reason: "stop",
-        }],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "POST" && path === "/v1/embeddings") {
-      const auth = await authorizeApiKey(req, path, 0);
-      const input = await body(req);
-      const text = String(input.input || input.text || "").trim();
-      if (!text) {
-        return send(res, 422, { error: { code: "invalid_input", message: "Input text is required." } });
-      }
-      const embedding = Array.from({ length: 1536 }, () => Number((Math.random() * 2 - 1).toFixed(6)));
-      return send(res, 200, {
-        object: "list",
-        data: [{ object: "embedding", index: 0, embedding }],
-        model: input.model || "vedoy/embeddings",
-        usage: { prompt_tokens: 5, total_tokens: 5 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "GET" && path === "/v1/credits/transactions") {
-      const token = requireUser(req);
-      const transactions = await supabase("developer_ledger_entries", {
-        token,
-        query: { select: "id,project_id,amount_microunits,entry_type,description,created_at", order: "created_at.desc", limit: "100" },
-      });
-      return send(res, 200, { data: transactions });
-    }
-    const apiKeysMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys$/i);
-    if (req.method === "GET" && apiKeysMatch) {
-      const token = requireUser(req);
-      const keys = await supabase("developer_api_keys", {
-        token,
-        query: { select: "id,name,key_prefix,last_used_at,expires_at,revoked_at,created_at", project_id: `eq.${apiKeysMatch[1]}`, order: "created_at.desc" },
-      });
-      return send(res, 200, { data: keys });
-    }
-    const revokeKeyMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys\/([0-9a-f-]+)$/i);
-    if (req.method === "DELETE" && revokeKeyMatch) {
-      const token = requireUser(req);
-      const keys = await supabase("developer_api_keys", {
-        token,
-        method: "PATCH",
-        prefer: "return=representation",
-        query: { id: `eq.${revokeKeyMatch[2]}`, project_id: `eq.${revokeKeyMatch[1]}` },
-        payload: { revoked_at: new Date().toISOString() },
-      });
-      return send(res, 200, { data: keys?.[0] || null });
-    }
-    if (req.method === "GET" && path === "/v1/rate-limits") {
-      const auth = await authorizeApiKey(req, path, 0);
-      return send(res, 200, {
-        projectId: auth.project_id,
-        rate_limit_per_minute: auth.remaining_requests,
-        remaining_requests: auth.remaining_requests,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (path.startsWith("/v1/")) {
-      return send(res, 501, {
-        error: {
-          code: "capability_not_configured",
-          message: "This API contract is documented, but its provider-backed implementation is not enabled yet.",
-        },
->>>>>>> Stashed changes
       });
       params.append("filter[features]", "sms");
       params.append("filter[features]", "voice");
@@ -668,6 +636,7 @@ export default async function handler(req, res) {
   } catch (error) {
     const headers = error.retryAfter ? { "Retry-After": String(error.retryAfter) } : {};
     const conflict = error.code === "23505";
-    return send(res, conflict ? 409 : error.status || 500, { error: { code: conflict ? "conflict" : error.code || "internal_error", message: conflict ? "A resource with the same unique value already exists." : error.status && error.status < 500 ? error.message : "The API could not complete the request." }, ...(error.operation ? { operation: error.operation } : {}) }, headers);
+    const cors = path === "/v1/health" ? healthCors(req) : {};
+    return send(res, conflict ? 409 : error.status || 500, { error: { code: conflict ? "conflict" : error.code || "internal_error", message: conflict ? "A resource with the same unique value already exists." : error.status && error.status < 500 ? error.message : "The API could not complete the request." }, ...(error.operation ? { operation: error.operation } : {}) }, headers, cors);
   }
 }
