@@ -44,11 +44,9 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 
 - `GET /v1/health`
 - `GET|POST /v1/projects`
-- `POST /v1/projects/{projectId}/api-keys`
-- `GET /v1/projects/{projectId}/api-keys`
+- `POST|GET /v1/projects/{projectId}/api-keys`
 - `DELETE /v1/projects/{projectId}/api-keys/{keyId}`
 - `GET /v1/models`
-<<<<<<< Updated upstream
 - `GET /v1/numbers/available`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
@@ -62,6 +60,25 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/credits/balance`
 - `GET /v1/credits/transactions`
 - `GET /v1/rate-limits`
+
+`GET /v1/health` is public and may be called without credentials. All project-management routes require the signed-in account's Supabase access token as `Authorization: Bearer <supabase_access_token>`. Product routes such as `/v1/models`, `/v1/numbers`, `/v1/messages`, `/v1/webhooks` and `/v1/agents` require a Vedøy API key as `Authorization: Bearer <VEDOY_API_KEY>`. The key is returned once; keep it in a server-side secret manager or environment variable, never in browser or mobile client code. Do not paste a real key into examples or commit it.
+
+The public health route permits browser reads from `https://vedoy-phone.vercel.app` with `GET` and `OPTIONS` only. This is an origin-specific CORS response, needs no environment variable, and does not grant access to account or project data.
+
+Public health check:
+
+```sh
+curl https://vedoy-dev-portal.vercel.app/api/v1/health
+```
+
+Protected product request (run from a trusted server terminal; `VEDOY_API_KEY` must be set in that server environment):
+
+```sh
+curl https://vedoy-dev-portal.vercel.app/api/v1/models \
+  -H "Authorization: Bearer $VEDOY_API_KEY"
+```
+
+The standard JavaScript `fetch` example in Learn and SDKs is also server-side only. A browser may call the public health endpoint, but must not receive or send a project API key.
 
 ## Telnyx pricing
 

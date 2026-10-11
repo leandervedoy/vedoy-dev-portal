@@ -2,25 +2,35 @@ openapi: 3.1.0
 info:
   title: Vedøy Developer API
   version: 2026-10-09
-  description: Canonical API surface for Vedøy developer products, including Telnyx-backed numbers and SMS sold in Vedøy Credits.
+  description: >-
+    Project control-plane and product API. Account-management routes authenticate
+    the signed-in user with a Supabase access token. Product routes authenticate
+    with a Vedøy API key. The public health route requires no credentials.
 servers:
   - url: https://vedoy-dev-portal.vercel.app/api
+    description: Production API
 paths:
   /v1/health:
     get:
-      summary: Service health
+      summary: Check API and provider readiness
       security: []
       responses:
-        '200': { description: API is reachable }
+        '200':
+          description: API health and configured capability status
   /v1/projects:
     get:
       summary: List projects owned by the signed-in user
-      security: [{ supabaseUser: [] }]
+      security:
+        - supabaseUser: []
       responses:
-        '200': { description: Project list }
+        '200':
+          description: Project list
+        '401':
+          description: Missing or invalid Supabase session
     post:
       summary: Create a developer project
-      security: [{ supabaseUser: [] }]
+      security:
+        - supabaseUser: []
       requestBody:
         required: true
         content:
@@ -29,133 +39,238 @@ paths:
               type: object
               required: [name]
               properties:
-                name: { type: string, minLength: 2, maxLength: 120 }
-                slug: { type: string }
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                slug:
+                  type: string
       responses:
-        '201': { description: Project created }
+        '201':
+          description: Project created
+        '401':
+          description: Missing or invalid Supabase session
+        '422':
+          description: Invalid project name
   /v1/projects/{projectId}/api-keys:
-    post:
-      summary: Create an API key and return the secret once
-      security: [{ supabaseUser: [] }]
-      parameters:
-        - in: path
-          name: projectId
-          required: true
-          schema: { type: string, format: uuid }
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List project API keys without returning their secret values
+      security:
+        - supabaseUser: []
       responses:
-        '201': { description: API key created }
+        '200':
+          description: API key metadata
+        '401':
+          description: Missing or invalid Supabase session
+    post:
+      summary: Create an API key and return its secret once
+      security:
+        - supabaseUser: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 80
+      responses:
+        '201':
+          description: Key created; copy the secret now because it is not returned again
+        '401':
+          description: Missing or invalid Supabase session
+        '404':
+          description: Project not found or not owned by the signed-in user
+  /v1/projects/{projectId}/api-keys/{keyId}:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: keyId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Revoke a project API key
+      security:
+        - supabaseUser: []
+      responses:
+        '200':
+          description: Revoked key metadata
+        '401':
+          description: Missing or invalid Supabase session
+        '404':
+          description: API key not found or not owned by the signed-in user
+  /v1/usage:
+    get:
+      summary: List recent usage for the signed-in user's projects
+      security:
+        - supabaseUser: []
+      responses:
+        '200':
+          description: Up to 100 recent usage events
+  /v1/credits/balance:
+    get:
+      summary: Get credit balances for the signed-in user's projects
+      security:
+        - supabaseUser: []
+      responses:
+        '200':
+          description: Project credit balances
+  /v1/credits/transactions:
+    get:
+      summary: List recent credit transactions for the signed-in user's projects
+      security:
+        - supabaseUser: []
+      responses:
+        '200':
+          description: Up to 100 recent ledger entries
   /v1/models:
     get:
-      summary: List available model routes
-      security: [{ vedoyApiKey: [] }]
+      summary: List published model route statuses
+      description: This route reports model status only; it does not execute model inference.
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Model route catalog }
-        '429': { description: Rate limit exceeded }
-<<<<<<< Updated upstream
+        '200':
+          description: Model route catalog
+        '401':
+          description: Missing or invalid Vedøy API key
+        '429':
+          description: Rate limit exceeded
   /v1/numbers/available:
     get:
-      summary: Search live Telnyx number inventory and create short-lived Vedøy quotes
-      security: [{ vedoyApiKey: [] }]
+      summary: Search Telnyx number inventory and create short-lived Vedøy quotes
+      security:
+        - vedoyApiKey: []
       parameters:
         - in: query
           name: country
-          schema: { type: string, pattern: '^[A-Z]{2}$', default: NO }
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+            default: NO
         - in: query
           name: type
-          schema: { type: string, enum: [local, toll_free, mobile, national, shared_cost], default: local }
+          schema:
+            type: string
+            enum: [local, toll_free, mobile, national, shared_cost]
+            default: local
         - in: query
           name: limit
-          schema: { type: integer, minimum: 1, maximum: 20, default: 10 }
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
       responses:
-        '200': { description: Current customer prices and quote IDs }
-        '503': { description: Telnyx is not configured }
+        '200':
+          description: Current customer prices and quote IDs
+        '401':
+          description: Missing or invalid Vedøy API key
+        '422':
+          description: Invalid country, type or limit
+        '503':
+          description: Telnyx or required pricing is not configured
   /v1/numbers:
     get:
       summary: List numbers owned by the API-key project
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Project number list }
+        '200':
+          description: Project number list
+        '401':
+          description: Missing or invalid Vedøy API key
   /v1/numbers/purchase:
     post:
       summary: Purchase a quoted number through Telnyx
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-=======
-  /v1/chat/completions:
-    post:
-      summary: Free chat completion (demo)
-      description: Free demo endpoint that echoes the last message. No credits consumed.
-      security: [{ vedoyApiKey: [] }]
->>>>>>> Stashed changes
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-<<<<<<< Updated upstream
               required: [quoteId]
               properties:
-                quoteId: { type: string, format: uuid }
+                quoteId:
+                  type: string
+                  format: uuid
       responses:
-        '201': { description: Number order accepted }
-        '402': { description: Insufficient Vedøy Credits }
-        '409': { description: Existing provider operation is pending or requires reconciliation }
-        '410': { description: Quote expired }
+        '201':
+          description: Number order accepted
+        '402':
+          description: Insufficient Vedøy Credits
+        '409':
+          description: Existing provider operation is pending or requires reconciliation
+        '410':
+          description: Quote expired
   /v1/messages:
     post:
       summary: Send an SMS from a project-owned number through Telnyx
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-=======
-              required: [messages]
-              properties:
-                model: { type: string, default: "vedoy/chat" }
-                messages:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      role: { type: string }
-                      content: { type: string }
-      responses:
-        '200': { description: Chat completion response }
-        '429': { description: Rate limit exceeded }
-  /v1/embeddings:
-    post:
-      summary: Free embeddings (demo)
-      description: Free demo endpoint that returns random embeddings. No credits consumed.
-      security: [{ vedoyApiKey: [] }]
->>>>>>> Stashed changes
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-<<<<<<< Updated upstream
               required: [from, to, text]
               properties:
-                from: { type: string, pattern: '^\\+[1-9]\\d{6,14}$' }
-                to: { type: string, pattern: '^\\+[1-9]\\d{6,14}$' }
-                text: { type: string, minLength: 1, maxLength: 1600 }
+                from:
+                  type: string
+                  pattern: '^\+[1-9]\d{6,14}$'
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{6,14}$'
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 1600
       responses:
-        '202': { description: Message accepted }
-        '402': { description: Insufficient Vedøy Credits }
-        '403': { description: The sending number is not owned by the project }
-        '409': { description: Existing provider operation is pending or requires reconciliation }
-<<<<<<< Updated upstream
+        '202':
+          description: Message accepted
+        '402':
+          description: Insufficient Vedøy Credits
+        '403':
+          description: The sending number is not owned by the project
+        '409':
+          description: Existing provider operation is pending or requires reconciliation
+        '503':
+          description: SMS pricing or Telnyx is not configured
   /v1/webhooks/endpoints:
     get:
       summary: List project webhook endpoints
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Endpoint list without signing secrets }
+        '200':
+          description: Endpoint list without signing secrets
     post:
       summary: Create a signed HTTPS webhook endpoint
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       requestBody:
         required: true
         content:
@@ -164,45 +279,65 @@ paths:
               type: object
               required: [url, events]
               properties:
-                url: { type: string, format: uri, pattern: '^https://' }
+                url:
+                  type: string
+                  format: uri
+                  pattern: '^https://'
                 events:
                   type: array
                   minItems: 1
                   maxItems: 50
-                  items: { type: string }
-                description: { type: string, maxLength: 240 }
+                  items:
+                    type: string
+                description:
+                  type: string
+                  maxLength: 240
       responses:
-        '201': { description: Endpoint created; signingSecret is returned once }
-        '422': { description: Invalid URL or event list }
-        '503': { description: Webhook signing is not configured }
+        '201':
+          description: Endpoint created; signingSecret is returned once
+        '422':
+          description: Invalid URL or event list
+        '503':
+          description: Webhook signing is not configured
   /v1/webhooks/deliveries:
     get:
       summary: List recent webhook delivery attempts
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Up to 100 recent delivery attempts }
+        '200':
+          description: Up to 100 recent delivery attempts
   /v1/webhooks/deliveries/{deliveryId}/retry:
     post:
       summary: Retry one webhook delivery
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       parameters:
         - in: path
           name: deliveryId
           required: true
-          schema: { type: string, format: uuid }
+          schema:
+            type: string
+            format: uuid
       responses:
-        '202': { description: Retry attempted and recorded }
-        '404': { description: Delivery not found }
-        '409': { description: Endpoint is disabled }
+        '202':
+          description: Retry attempted and recorded
+        '404':
+          description: Delivery not found
+        '409':
+          description: Endpoint is disabled
   /v1/agents:
     get:
       summary: List saved agents in the project
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Agent configuration list }
+        '200':
+          description: Agent configuration list
     post:
       summary: Create an agent configuration with a budget guard
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       requestBody:
         required: true
         content:
@@ -211,110 +346,79 @@ paths:
               type: object
               required: [name]
               properties:
-                name: { type: string, minLength: 2, maxLength: 120 }
-                instructions: { type: string, maxLength: 16000 }
-                model: { type: string, default: vedoy/router }
-                monthlyBudgetMicrounits: { type: integer, minimum: 0 }
-                status: { type: string, enum: [draft, active], default: draft }
-                metadata: { type: object }
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                instructions:
+                  type: string
+                  maxLength: 16000
+                model:
+                  type: string
+                  default: vedoy/router
+                monthlyBudgetMicrounits:
+                  type: integer
+                  minimum: 0
+                status:
+                  type: string
+                  enum: [draft, active]
+                  default: draft
+                metadata:
+                  type: object
       responses:
-        '201': { description: Agent saved }
+        '201':
+          description: Agent saved
   /v1/agents/{agentId}/runs:
+    parameters:
+      - in: path
+        name: agentId
+        required: true
+        schema:
+          type: string
+          format: uuid
     get:
       summary: List recent runs for an agent
-      security: [{ vedoyApiKey: [] }]
-      parameters:
-        - in: path
-          name: agentId
-          required: true
-          schema: { type: string, format: uuid }
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Agent run list }
+        '200':
+          description: Agent run list
     post:
       summary: Request an agent run
       description: The run is recorded as blocked until a server-side agent runner is configured.
-      security: [{ vedoyApiKey: [] }]
+      security:
+        - vedoyApiKey: []
       parameters:
-        - in: path
-          name: agentId
-          required: true
-          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object }
+            schema:
+              type: object
       responses:
-        '503': { description: Agent runner is not configured; blocked run is recorded }
-=======
-=======
-              required: [input]
-              properties:
-                model: { type: string, default: "vedoy/embeddings" }
-                input: { type: string }
-      responses:
-        '200': { description: Embedding response }
-        '429': { description: Rate limit exceeded }
-  /v1/credits/transactions:
-    get:
-      summary: List credit transactions
-      security: [{ supabaseUser: [] }]
-      responses:
-        '200': { description: Credit transaction history }
-  /v1/projects/{projectId}/api-keys:
-    get:
-      summary: List API keys for a project
-      security: [{ supabaseUser: [] }]
-      parameters:
-        - in: path
-          name: projectId
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        '200': { description: API key list }
-    delete:
-      summary: Revoke an API key
-      security: [{ supabaseUser: [] }]
-      parameters:
-        - in: path
-          name: projectId
-          required: true
-          schema: { type: string, format: uuid }
-        - in: path
-          name: keyId
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        '200': { description: Revoked key }
+        '503':
+          description: Agent runner is not configured; blocked run is recorded
   /v1/rate-limits:
     get:
-      summary: Get current rate limit status
-      security: [{ vedoyApiKey: [] }]
+      summary: Get current project rate limit status
+      security:
+        - vedoyApiKey: []
       responses:
-        '200': { description: Rate limit status }
-        '429': { description: Rate limit exceeded }
->>>>>>> Stashed changes
->>>>>>> Stashed changes
-  /v1/usage:
-    get:
-      summary: List recent usage for the signed-in user's projects
-      security: [{ supabaseUser: [] }]
-      responses:
-        '200': { description: Usage events }
-  /v1/credits/balance:
-    get:
-      summary: Get project credit balances
-      security: [{ supabaseUser: [] }]
-      responses:
-        '200': { description: Credit balances }
+        '200':
+          description: Project request limit and remaining requests
+        '429':
+          description: Rate limit exceeded
 components:
   parameters:
     IdempotencyKey:
       in: header
       name: Idempotency-Key
       required: true
-      schema: { type: string, minLength: 8, maxLength: 200 }
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
       description: Stable unique key for this intended provider operation. Reuse it after a timeout.
   securitySchemes:
     supabaseUser:
