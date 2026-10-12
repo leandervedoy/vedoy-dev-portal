@@ -48,7 +48,8 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/projects/{projectId}/api-keys`
 - `DELETE /v1/projects/{projectId}/api-keys/{keyId}`
 - `GET /v1/models`
-<<<<<<< Updated upstream
+- `POST /v1/chat/completions` (echo demo only)
+- `POST /v1/embeddings` (random-vector demo only)
 - `GET /v1/numbers/available`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
@@ -62,6 +63,12 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/credits/balance`
 - `GET /v1/credits/transactions`
 - `GET /v1/rate-limits`
+
+Account and control-plane routes use `Authorization: Bearer <Supabase access token>`.
+Project API routes use `Authorization: Bearer <vdy_live_...>`; keep these keys on
+trusted servers, never in browser or mobile bundles. JSON requests use
+`Content-Type: application/json`. Number purchase, SMS send, and agent-run
+requests require an `Idempotency-Key` header.
 
 ## Telnyx pricing
 
