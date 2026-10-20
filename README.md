@@ -30,8 +30,6 @@ Telnyx number search, number purchase and outbound SMS are implemented behind Ve
 
 The browser receives only the Supabase publishable key. PostgreSQL credentials stay in Vercel Functions. Never commit database URLs, service-role keys, carrier credentials or provider secrets.
 
-For deployed number search and purchase, configure `TELNYX_API_KEY`, `DATABASE_URL`, and `VEDOY_GROSS_MARGIN_BPS=2000` in the server environment, then apply the migrations with `DATABASE_URL_UNPOOLED`. `GET /api/v1/health` reports whether Telnyx and the required database schema are ready. Number quotes are priced from Telnyx's current USD cost and expire after ten minutes; purchase charges the upfront cost plus the first month at the quoted customer price.
-
 ## Data residency
 
 The API uses standard PostgreSQL through `pg`; it does not depend on Neon-specific database features. Neon can therefore be used for development or an interim deployment, and the same schema can later run on a managed PostgreSQL service in Norway. Set `DATABASE_PROVIDER=neon` or `DATABASE_PROVIDER=gigahost` so health responses expose the active host without exposing credentials.
@@ -45,11 +43,7 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/health`
 - `GET|POST /v1/projects`
 - `POST /v1/projects/{projectId}/api-keys`
-- `GET /v1/projects/{projectId}/api-keys`
-- `DELETE /v1/projects/{projectId}/api-keys/{keyId}`
 - `GET /v1/models`
-- `POST /v1/chat/completions` (echo demo only)
-- `POST /v1/embeddings` (random-vector demo only)
 - `GET /v1/numbers/available`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
@@ -61,18 +55,16 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET|POST /v1/agents/{agentId}/runs`
 - `GET /v1/usage`
 - `GET /v1/credits/balance`
-- `GET /v1/credits/transactions`
-- `GET /v1/rate-limits`
 
-Account and control-plane routes use `Authorization: Bearer <Supabase access token>`.
-Project API routes use `Authorization: Bearer <vdy_live_...>`; keep these keys on
-trusted servers, never in browser or mobile bundles. JSON requests use
-`Content-Type: application/json`. Number purchase, SMS send, and agent-run
-requests require an `Idempotency-Key` header.
+## Selling Vedøy Credits
+
+The portal supports fixed credit packs through Stripe-hosted Checkout. A signed-in owner chooses a project, the server creates a Checkout Session, and `POST /api/stripe-webhook` grants credits only after a signed paid event. Duplicate Stripe events and sessions are idempotent.
+
+Required production settings are `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_CREDITS_STARTER`, `STRIPE_PRICE_CREDITS_SCALE`, and `VEDOY_PUBLIC_URL`. Register `checkout.session.completed` and `checkout.session.async_payment_succeeded` at `https://vedoy-dev-portal.vercel.app/api/stripe-webhook`.
 
 ## Telnyx pricing
 
-`VEDOY_GROSS_MARGIN_BPS=2000` targets a 20% gross margin. Customer price is calculated as provider cost divided by `0.80`, then rounded up to whole Vedøy Credits using `VEDOY_CREDIT_USD_MICROS` (default: USD 0.01 per Credit). This is a margin calculation, not a 20% markup. Number quotes use current Telnyx inventory costs and expire after ten minutes. SMS is disabled until an explicit provider cost is configured because destination and carrier fees vary.
+Customer usage is converted using the configured server-side pricing policy and credit-value setting. Number quotes use current Telnyx inventory costs and expire after ten minutes. SMS is disabled until an explicit provider cost is configured because destination and carrier fees vary.
 
 Provider operations require an `Idempotency-Key`. Credits are reserved before Telnyx is called. Deterministic failures receive an automatic ledger refund; timeouts and provider 5xx responses are marked `unknown` for reconciliation rather than being retried blindly.
 
@@ -85,3 +77,17 @@ Webhook destinations must be public HTTPS URLs; local and private-network target
 Agent definitions and runs are project-scoped. The control plane stores instructions, model selection, status and a monthly budget guard. Runs fail closed as `blocked` with `agent_runner_not_configured` until a reviewed server-side runner and provider billing adapter are connected; the portal does not silently make an AI provider call.
 
 See `openapi.yaml` for the complete current contract.
+
+## Developer Room and external API lessons
+
+The opening journey includes an original Three.js workspace animated with Anime.js. Scrolling in either direction moves the camera; Room, Phone, API and Events buttons jump between chapters. Reduced-motion preferences disable interpolated camera movement and continuous rotation. Models are loaded for the opening journey and released when leaving it.
+
+The public homepage (`/` or `#landing`) starts with the original mission cards, then continues directly into the 3D room on the same scrollable page. A scroll-linked fade and lift transition reveals the room; scrolling back restores the cards. The room is part of this opening experience and is not listed as a separate documentation page. A compact action in the 3D stage opens the complete documentation portal, while the final room actions link to the portal overview, authentication/API keys and Learn. Legacy `#room` links redirect to `#landing`; the standalone card tour remains at `#missions`.
+
+`responsive.css` is the final shared layout layer for narrow phones, tablet drawers, landscape screens and wide desktop layouts. `portal-motion.js` uses Anime.js `createScope().add()` with media queries for a mouse-following mission reticle and subtle card animations. Scope cleanup removes listeners and animations when preferences or content change; touch and reduced-motion users do not get pointer tracking.
+
+The supplied laptop and phone models are converted to neutral, compressed GLB assets in `assets/models/`. To rebuild them, run `node scripts/convert-room-models.mjs <laptop.3dm> <phone.obj>`. Original model files are not modified. `npm run build` bundles `room-scene.js` with its dependencies.
+
+`#public-apis` contains Dog CEO, Open-Meteo weather/marine/geocoding, ipify, IPinfo Lite, Scommetix football tips through RapidAPI, and an unofficial open-source World Cup 2026 JSON example. Try buttons make optional external GET requests; they do not use Vedøy keys or credits. Token-backed services show server-side examples instead of exposing credentials in the browser. Open-Meteo's hosted free API is for non-commercial use; check the linked plans and attribution requirements before commercial use. Sports predictions are informational and require local age, gambling and regional checks when used in a betting product.
+
+For local interaction checks: run `npm run build`, `node scripts/serve-preview.mjs`, then `node scripts/verify-room.mjs` in another terminal (Chrome required). Set `VEDOY_VERIFY_ORIGIN` to check a deployed site.

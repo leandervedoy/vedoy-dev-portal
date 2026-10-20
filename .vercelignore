@@ -3,3 +3,6 @@ _vercel-static/
 _video-frames/
 tools/
 .git/
+tmp/
+output/
+public (# Name clash *)/

@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
-import { query, transaction } from "../lib/database.js";
+import adminHandler from '../lib/admin.js';
+import { query, transaction, databaseProvider } from "../lib/database.js";
 import { deliverWebhook, emitWebhookEvent, webhookEndpointSecret } from "../lib/webhooks.js";
+import { billingProducts, purchasableProduct, stripeClient } from "../lib/billing.js";
 import {
   normalizeAvailableNumber,
   pricingConfiguration,
@@ -19,7 +21,7 @@ function send(res, status, payload, headers = {}) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("X-Vedoy-API-Version", API_VERSION);
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type,Idempotency-Key");
   Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
   res.end(JSON.stringify(payload));
@@ -82,7 +84,7 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
       );
       if (prior.rowCount) {
         const balance = await client.query("select balance_microunits from developer_wallet_balances where project_id = $1", [key.project_id]);
-        return { allowed: true, reason: "idempotent_replay", project_id: key.project_id, limit_per_minute: key.rate_limit_per_minute, remaining_requests: key.rate_limit_per_minute, balance_microunits: balance.rows[0]?.balance_microunits || 0 };
+        return { allowed: true, reason: "idempotent_replay", project_id: key.project_id, remaining_requests: key.rate_limit_per_minute, balance_microunits: balance.rows[0]?.balance_microunits || 0 };
       }
     }
 
@@ -113,7 +115,7 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
       );
     }
     await client.query("update developer_api_keys set last_used_at = now() where id = $1", [key.api_key_id]);
-    return { allowed: true, reason: "ok", project_id: key.project_id, api_key_id: key.api_key_id, limit_per_minute: key.rate_limit_per_minute, remaining_requests: Math.max(0, key.rate_limit_per_minute - requestCount - 1), balance_microunits: balance - costMicrounits };
+    return { allowed: true, reason: "ok", project_id: key.project_id, api_key_id: key.api_key_id, remaining_requests: Math.max(0, key.rate_limit_per_minute - requestCount - 1), balance_microunits: balance - costMicrounits };
   });
 
   if (!result.allowed) {
@@ -224,30 +226,12 @@ async function finishProviderOperation(operation, { status, responsePayload, err
 
 export default async function handler(req, res) {
   const path = routePath(req);
+  if(path === '/admin') return adminHandler(req,res);
   try {
     if (req.method === "OPTIONS") return send(res, 204, {});
     if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
-      const database = await query(
-        `select current_database() as name,
-          to_regclass('public.developer_provider_quotes') is not null as quotes_ready,
-          to_regclass('public.developer_phone_numbers') is not null as numbers_ready,
-          to_regclass('public.developer_provider_operations') is not null as operations_ready,
-          to_regclass('public.developer_wallet_balances') is not null as wallets_ready`,
-      );
-      const pricing = pricingConfiguration();
-      const schemaReady = Object.entries(database.rows[0]).filter(([key]) => key.endsWith("_ready")).every(([, ready]) => ready);
-      const telnyxReady = telnyxConfigured();
-      return send(res, 200, {
-        ok: true,
-        service: "vedoy-developer-api",
-        version: API_VERSION,
-        database: { provider: process.env.DATABASE_PROVIDER || "postgresql", connected: true, name: database.rows[0].name },
-        providers: { telnyx: telnyxReady ? "configured" : "not_configured" },
-        capabilities: {
-          phoneNumbers: { ready: telnyxReady && schemaReady, schemaReady, grossMarginBps: pricing.grossMarginBps },
-        },
-        docs: "/openapi.yaml",
-      });
+      const database = await query("select current_database() as name");
+      return send(res, 200, { ok: true, service: "vedoy-developer-api", version: API_VERSION, database: { provider: databaseProvider, connected: true, name: database.rows[0].name }, providers: { telnyx: telnyxConfigured() ? "configured" : "not_configured" }, docs: "/openapi.yaml" });
     }
     if (req.method === "GET" && path === "/v1/projects") {
       const user = await requireUser(req);
@@ -287,6 +271,42 @@ export default async function handler(req, res) {
       const user = await requireUser(req);
       const wallets = await query(`select b.project_id,b.balance_microunits,b.updated_at from developer_wallet_balances b join developer_projects p on p.id = b.project_id where p.owner_id = $1`, [user.id]);
       return send(res, 200, { data: wallets.rows });
+    }
+    if (req.method === "GET" && path === "/v1/billing/products") {
+      const products = billingProducts().map(({ env, priceId, ...product }) => ({ ...product, available: Boolean(priceId) }));
+      return send(res, 200, { data: products, checkoutAvailable: Boolean(stripeClient()) });
+    }
+    if (req.method === "GET" && path === "/v1/billing/overview") {
+      const user = await requireUser(req);
+      const purchases = await query(`select s.stripe_session_id,s.project_id,s.product_slug,s.credits_microunits,s.amount_minor,s.currency,s.payment_status,s.created_at,s.completed_at from developer_checkout_sessions s join developer_projects p on p.id=s.project_id where p.owner_id=$1 order by s.created_at desc limit 100`, [user.id]);
+      const ledger = await query(`select l.project_id,l.amount_microunits,l.entry_type,l.description,l.created_at from developer_ledger_entries l join developer_projects p on p.id=l.project_id where p.owner_id=$1 order by l.created_at desc limit 100`, [user.id]);
+      return send(res, 200, { data: { purchases: purchases.rows, ledger: ledger.rows } });
+    }
+    if (req.method === "POST" && path === "/v1/billing/checkout") {
+      const user = await requireUser(req);
+      const input = await body(req);
+      const product = purchasableProduct(String(input.product || ""));
+      const stripe = stripeClient();
+      if (!stripe || !product) return send(res, 503, { error: { code: "checkout_not_configured", message: "Credit checkout is not configured for this deployment." } });
+      const owned = await query("select id,name from developer_projects where id=$1 and owner_id=$2", [input.projectId, user.id]);
+      if (!owned.rowCount) return send(res, 404, { error: { code: "project_not_found", message: "Project not found." } });
+      let customer = await query("select stripe_customer_id from developer_billing_customers where project_id=$1", [input.projectId]);
+      let customerId = customer.rows[0]?.stripe_customer_id;
+      if (!customerId) {
+        const created = await stripe.customers.create({ email: user.email || undefined, name: owned.rows[0].name, metadata: { project_id: input.projectId } });
+        customerId = created.id;
+        await query(`insert into developer_billing_customers (project_id,stripe_customer_id,email) values ($1,$2,$3) on conflict (project_id) do update set stripe_customer_id=excluded.stripe_customer_id,email=excluded.email,updated_at=now()`, [input.projectId, customerId, user.email || null]);
+      }
+      const origin = process.env.VEDOY_PUBLIC_URL || "https://vedoy-dev-portal.vercel.app";
+      const integrationIdentifier = `vedoy_credits_${randomBytes(4).toString("hex")}`;
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment", customer: customerId, line_items: [{ price: product.priceId, quantity: 1 }],
+        success_url: `${origin}/#credits?checkout=success`, cancel_url: `${origin}/#credits?checkout=cancelled`,
+        client_reference_id: input.projectId, integration_identifier: integrationIdentifier,
+        metadata: { project_id: input.projectId, product_slug: product.slug, credits: String(product.credits) },
+      });
+      await query(`insert into developer_checkout_sessions (stripe_session_id,project_id,product_slug,credits_microunits,payment_status) values ($1,$2,$3,$4,'open') on conflict do nothing`, [session.id, input.projectId, product.slug, product.credits * 1_000_000]);
+      return send(res, 201, { data: { checkoutUrl: session.url, sessionId: session.id } });
     }
     if (req.method === "GET" && path === "/v1/webhooks/endpoints") {
       const auth = await authorizeApiKey(req, path, 0);
@@ -400,107 +420,14 @@ export default async function handler(req, res) {
     }
     if (req.method === "GET" && path === "/v1/models") {
       const auth = await authorizeApiKey(req, path, 0);
-      return send(res, 200, {
-        data: [
-          { id: "vedoy/openai", type: "text", status: "preview", context_window: 128000, max_output: 4096 },
-          { id: "vedoy/router", type: "text", status: "planned", context_window: 256000, max_output: 8192 },
-          { id: "vedoy/embeddings", type: "embedding", status: "preview", dimensions: 1536 },
-          { id: "vedoy/chat", type: "chat", status: "preview", context_window: 128000, max_output: 4096 },
-        ],
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "POST" && path === "/v1/chat/completions") {
-      const auth = await authorizeApiKey(req, path, 0);
-      const input = await body(req);
-      const messages = Array.isArray(input.messages) ? input.messages : [];
-      if (!messages.length) {
-        return send(res, 422, { error: { code: "invalid_messages", message: "At least one message is required." } });
-      }
-      const lastMessage = messages[messages.length - 1];
-      const responseContent = `Vedøy API response: You said "${String(lastMessage.content || "").slice(0, 200)}". This is a free demo endpoint.`;
-      return send(res, 200, {
-        id: `chatcmpl-${randomBytes(12).toString("hex")}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: input.model || "vedoy/chat",
-        choices: [{
-          index: 0,
-          message: { role: "assistant", content: responseContent },
-          finish_reason: "stop",
-        }],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "POST" && path === "/v1/embeddings") {
-      const auth = await authorizeApiKey(req, path, 0);
-      const input = await body(req);
-      const text = String(input.input || input.text || "").trim();
-      if (!text) {
-        return send(res, 422, { error: { code: "invalid_input", message: "Input text is required." } });
-      }
-      const embedding = Array.from({ length: 1536 }, () => Number((Math.random() * 2 - 1).toFixed(6)));
-      return send(res, 200, {
-        object: "list",
-        data: [{ object: "embedding", index: 0, embedding }],
-        model: input.model || "vedoy/embeddings",
-        usage: { prompt_tokens: 5, total_tokens: 5 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
-    }
-    if (req.method === "GET" && path === "/v1/credits/transactions") {
-      const user = await requireUser(req);
-      const transactions = await query(
-        `select e.id,e.project_id,e.amount_microunits,e.entry_type,e.description,e.created_at
-           from developer_ledger_entries e
-           join developer_projects p on p.id=e.project_id
-          where p.owner_id=$1 order by e.created_at desc limit 100`,
-        [user.id],
-      );
-      return send(res, 200, { data: transactions.rows });
-    }
-    const apiKeysMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys$/i);
-    if (req.method === "GET" && apiKeysMatch) {
-      const user = await requireUser(req);
-      const keys = await query(
-        `select k.id,k.project_id,k.name,k.key_prefix,k.last_used_at,k.expires_at,k.revoked_at,k.created_at
-           from developer_api_keys k
-           join developer_projects p on p.id=k.project_id
-          where p.id=$1 and p.owner_id=$2 order by k.created_at desc`,
-        [apiKeysMatch[1], user.id],
-      );
-      return send(res, 200, { data: keys.rows });
-    }
-    const revokeKeyMatch = path.match(/^\/v1\/projects\/([0-9a-f-]+)\/api-keys\/([0-9a-f-]+)$/i);
-    if (req.method === "DELETE" && revokeKeyMatch) {
-      const user = await requireUser(req);
-      const keys = await query(
-        `update developer_api_keys k set revoked_at=coalesce(k.revoked_at,now())
-           from developer_projects p
-          where k.id=$2 and k.project_id=p.id and p.id=$1 and p.owner_id=$3
-          returning k.id,k.project_id,k.name,k.key_prefix,k.last_used_at,k.expires_at,k.revoked_at,k.created_at`,
-        [revokeKeyMatch[1], revokeKeyMatch[2], user.id],
-      );
-      if (!keys.rowCount) return send(res, 404, { error: { code: "api_key_not_found", message: "API key not found." } });
-      return send(res, 200, { data: keys.rows[0] });
-    }
-    if (req.method === "GET" && path === "/v1/rate-limits") {
-      const auth = await authorizeApiKey(req, path, 0);
-      return send(res, 200, {
-        projectId: auth.project_id,
-        limit_per_minute: auth.limit_per_minute,
-        remaining_requests: auth.remaining_requests,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+      return send(res, 200, { data: [{ id: "vedoy/openai", type: "text", status: "preview" }, { id: "vedoy/router", type: "text", status: "planned" }], projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/numbers/available") {
       const auth = await authorizeApiKey(req, path, 0);
       const url = requestUrl(req);
       const country = String(url.searchParams.get("country") || "NO").toUpperCase();
       const numberType = String(url.searchParams.get("type") || "local").toLowerCase();
-      const requestedLimit = Number(url.searchParams.get("limit") || 10);
-      if (!Number.isInteger(requestedLimit) || requestedLimit < 1) return send(res, 422, { error: { code: "invalid_limit", message: "limit must be a positive integer." } });
-      const limit = Math.min(20, requestedLimit);
+      const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || 10)));
       if (!/^[A-Z]{2}$/.test(country)) return send(res, 422, { error: { code: "invalid_country", message: "country must be an ISO 3166-1 alpha-2 code." } });
       if (!new Set(["local", "toll_free", "mobile", "national", "shared_cost"]).has(numberType)) return send(res, 422, { error: { code: "invalid_number_type", message: "Unsupported phone number type." } });
       const params = new URLSearchParams({
@@ -513,45 +440,20 @@ export default async function handler(req, res) {
       params.append("filter[features]", "voice");
       const { payload } = await telnyxRequest(`/available_phone_numbers?${params}`);
       const pricing = pricingConfiguration();
-      let pricedNumbers;
-      try {
-        if (!Array.isArray(payload.data)) {
-          throw Object.assign(new Error("Telnyx returned an invalid available-number response."), { status: 502, code: "invalid_provider_response" });
-        }
-        pricedNumbers = payload.data.map(item => normalizeAvailableNumber(item, pricing))
-          .filter(item => item.phoneNumber && item.currency === "USD");
-      } catch (error) {
-        throw Object.assign(error, { status: error.status || 502, code: error.code || "invalid_provider_pricing" });
-      }
-      const quoteRows = pricedNumbers.length
-        ? await query(
+      const numbers = [];
+      for (const raw of payload.data || []) {
+        const item = normalizeAvailableNumber(raw, pricing);
+        if (!item.phoneNumber || item.currency !== "USD") continue;
+        const quote = await query(
           `insert into developer_provider_quotes
            (project_id,provider,product_type,provider_reference,currency,provider_upfront_micros,provider_recurring_micros,
             customer_upfront_micros,customer_recurring_micros,gross_margin_bps,metadata,expires_at)
-           select $1,'telnyx','phone_number',item.phone_number,item.currency,item.provider_upfront_micros,item.provider_monthly_micros,
-                  item.customer_upfront_micros,item.customer_monthly_micros,$3,item.metadata,now()+interval '10 minutes'
-             from jsonb_to_recordset($2::jsonb) as item(
-               phone_number text,currency text,provider_upfront_micros bigint,provider_monthly_micros bigint,
-               customer_upfront_micros bigint,customer_monthly_micros bigint,metadata jsonb
-             )
-           returning id,provider_reference,expires_at`,
-          [auth.project_id, JSON.stringify(pricedNumbers.map(item => ({
-            phone_number: item.phoneNumber,
-            currency: item.currency,
-            provider_upfront_micros: item.providerUpfrontMicros,
-            provider_monthly_micros: item.providerMonthlyMicros,
-            customer_upfront_micros: item.customerUpfrontMicros,
-            customer_monthly_micros: item.customerMonthlyMicros,
-            metadata: { countryCode: country, numberType, features: item.features },
-          }))), pricing.grossMarginBps],
-        )
-        : { rows: [] };
-      const quotesByNumber = new Map(quoteRows.rows.map(quote => [quote.provider_reference, quote]));
-      const numbers = pricedNumbers.map(item => {
-        const quote = quotesByNumber.get(item.phoneNumber);
-        return {
-          quoteId: quote.id,
-          expiresAt: quote.expires_at,
+           values ($1,'telnyx','phone_number',$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now()+interval '10 minutes') returning id,expires_at`,
+          [auth.project_id, item.phoneNumber, item.currency, item.providerUpfrontMicros, item.providerMonthlyMicros, item.customerUpfrontMicros, item.customerMonthlyMicros, pricing.grossMarginBps, JSON.stringify({ countryCode: country, numberType, features: item.features })],
+        );
+        numbers.push({
+          quoteId: quote.rows[0].id,
+          expiresAt: quote.rows[0].expires_at,
           phoneNumber: item.phoneNumber,
           countryCode: country,
           numberType,
@@ -562,8 +464,8 @@ export default async function handler(req, res) {
             monthlyCredits: item.customerMonthlyCredits,
             grossMarginTarget: pricing.grossMarginBps / 10_000,
           },
-        };
-      });
+        });
+      }
       return send(res, 200, { data: numbers }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/numbers") {
