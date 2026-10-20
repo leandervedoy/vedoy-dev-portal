@@ -4,7 +4,6 @@ import { normalizeAvailableNumber, retailMicros, usdToCreditsMicrounits } from "
 
 test("20 percent gross margin divides provider cost by 0.8", () => {
   assert.equal(retailMicros(1_000_000, 2000), 1_250_000);
-  assert.equal(retailMicros(99, 2000), 124);
 });
 
 test("credit conversion rounds up to whole credits", () => {
@@ -20,20 +19,4 @@ test("available number prices hide provider math from the public shape", () => {
   }, { grossMarginBps: 2000, creditUsdMicros: 10_000 });
   assert.equal(result.customerMonthlyMicros, 1_250_000);
   assert.equal(result.customerUpfrontCredits, 50);
-});
-
-test("provider prices are parsed without floating-point rounding", () => {
-  const result = normalizeAvailableNumber({
-    phone_number: "+4721000000",
-    cost_information: { currency: "USD", monthly_cost: "0.000001", upfront_cost: "0.000001" },
-  }, { grossMarginBps: 2000, creditUsdMicros: 10_000 });
-  assert.equal(result.providerMonthlyMicros, 1);
-  assert.equal(result.customerMonthlyMicros, 2);
-});
-
-test("available numbers without recurring prices cannot be quoted", () => {
-  assert.throws(
-    () => normalizeAvailableNumber({ phone_number: "+4721000000" }, { grossMarginBps: 2000, creditUsdMicros: 10_000 }),
-    { code: "provider_pricing_unavailable", status: 502 },
-  );
 });

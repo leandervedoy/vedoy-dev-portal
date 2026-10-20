@@ -1,0 +1,121 @@
+/* Shared layout rules, loaded last so every portal surface uses the same breakpoints. */
+html{overflow-x:clip;scroll-padding-top:96px}
+body{overflow-x:clip}
+img,video,canvas,svg{max-width:100%}
+.main-area,.content-wrap,.doc-view,.doc-columns>*,.product-page-grid>*,.pricing-grid>*,.endpoint-grid>*,.api-grid>*,.console-grid>*,.learn-lab>*,.sdk-route>*,.call-usage-estimator>*{min-width:0}
+.content-wrap{max-width:1560px;margin-inline:auto}
+.doc-view{width:100%;max-width:1160px;margin-inline:auto;padding:clamp(28px,5vw,64px) clamp(0px,2vw,24px) 56px}
+.doc-view h1{font-size:clamp(32px,5.4vw,76px);line-height:1.08;letter-spacing:-.045em;overflow-wrap:break-word}
+.doc-view h2,.core-intro h1,.core-section-heading h2{overflow-wrap:break-word}
+.doc-view p,.doc-view li,.doc-lead{overflow-wrap:anywhere}
+.doc-view pre{max-width:100%;overflow:auto}
+.doc-table{display:block;width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.doc-table th,.doc-table td{white-space:normal;min-width:120px;overflow-wrap:anywhere}
+.doc-view input:not([type=checkbox]):not([type=radio]),.doc-view textarea,.doc-view select{max-width:100%;min-width:0}
+.call-estimate-output strong{white-space:nowrap;font-size:clamp(24px,3vw,40px)}
+html[data-theme="light"] .call-estimate-output strong{color:#176a80}
+html[data-theme="light"] .call-estimate-output .primary-estimate strong{color:#2c7053}
+html[data-theme="light"] .detail-notes h2{color:#edf6fa}
+html[data-theme="light"] .doc-view>a,html[data-theme="light"] .doc-view p>a,html[data-theme="light"] .doc-view .doc-cta{color:#216555!important}
+html[data-theme="light"] .external-api-intro>a,html[data-theme="light"] .external-api-actions a,html[data-theme="light"] .external-api-terms a{color:#216575!important}
+.topbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding-inline:clamp(18px,3vw,48px)}
+.breadcrumbs{min-width:0;overflow:hidden}.breadcrumbs strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-actions{min-width:0;gap:10px;flex-wrap:nowrap}
+.theme-toggle,.account-button,.mobile-menu,.sidebar-close,.top-up-button{flex-shrink:0;min-height:44px}
+.theme-toggle{width:auto;white-space:nowrap}
+.account-button{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mission-entry.has-pointer-reticle .mission-reticle{position:absolute;animation:none!important;transition:none;transform:none;translate:-50% -50%;width:42px;height:42px;opacity:.65}
+.mission-entry.has-pointer-reticle .mission-reticle b{inset:17px}
+.mission-entry.has-pointer-reticle .mission-hud{pointer-events:none}
+.mission-entry.has-pointer-reticle .entry-nav-toggle{pointer-events:auto}
+.auth-backdrop{padding:16px;overflow-y:auto}
+.auth-dialog{width:min(420px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
+.room-stage{min-height:min(410px,70svh)}
+.room-landing-nav{padding-top:max(14px,env(safe-area-inset-top))}
+@media(min-width:1600px){.doc-view{padding-top:70px}.content-wrap{padding-inline:64px}.room-heading h1{font-size:80px}}
+@media(max-width:1280px){.top-actions .top-link{display:none}.content-wrap{padding-inline:clamp(16px,4vw,48px)}.design-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1000px){.top-actions .version-pill{display:none}.doc-columns,.product-page-grid,.credits-overview,.learn-lab,.sdk-route{grid-template-columns:1fr}.sdk-route{flex-direction:column;align-items:flex-start}.call-usage-estimator{grid-template-columns:1fr}.call-estimator-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.call-estimator-fields .period-input{grid-column:1/-1}.design-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.room-journey{grid-template-columns:minmax(0,1.3fr) minmax(220px,.8fr);gap:24px}}
+@media(max-width:760px){
+  html{scroll-padding-top:130px}
+  .topbar{height:auto;min-height:64px;grid-template-columns:44px minmax(0,1fr);gap:8px 12px;padding:10px 16px}
+  .topbar .mobile-menu{width:44px;height:44px;margin:0}
+  .top-actions{grid-column:1/-1;display:flex;width:100%;gap:8px;justify-content:space-between;margin:0}
+  .top-actions .coin-pill{flex:0 1 auto;min-width:0;white-space:nowrap;font-size:10px;padding:8px}
+  .top-actions .coin-pill>span{display:none}
+  .top-up-button{padding:8px 10px;font-size:11px}
+  .theme-toggle{width:auto!important;min-width:44px;padding:8px 10px;gap:6px;font-size:11px}
+  .account-button{max-width:140px;font-size:11px!important;padding:8px 10px!important}
+  .content-wrap{padding:0 18px}
+  .doc-view{padding:32px 0 48px}
+  .doc-columns,.product-page-grid,.credits-overview,.pricing-grid,.endpoint-grid,.api-grid,.lesson-grid,.anatomy-grid,.learn-library-grid,.detail-notes,.design-elements-grid,.simulation-grid{grid-template-columns:1fr}
+  .doc-detail-control{grid-template-columns:1fr;gap:16px;padding:18px}
+  .doc-detail-control input[type=range]{height:30px}
+  .doc-mini-card,.endpoint-card,.pricing-card,.external-api-card{padding:20px}
+  .console-panel,.console-card{min-width:0;max-width:100%}
+  .console-task-list li{display:grid;grid-template-columns:25px minmax(0,1fr);gap:8px 10px}
+  .console-task-list em{grid-column:2;justify-self:start;margin-left:0;white-space:nowrap}
+  .quickstart-heading,.playground-head,.mobile-readiness-banner,.design-section-head,.design-icon-callout{flex-direction:column;align-items:flex-start;gap:16px}
+  .quickstart-actions{display:flex;flex-wrap:wrap;gap:12px}
+  .sdk-actions{width:100%;min-width:0;flex-wrap:wrap}
+  .call-usage-estimator{padding:20px;gap:22px}
+  .call-estimator-card{padding:20px}
+  .call-estimator-fields{grid-template-columns:1fr}
+  .call-estimate-output{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .call-estimate-output .primary-estimate{grid-column:1/-1}
+  .room-journey{display:block}.room-stage{height:44svh;min-height:260px;max-height:460px}
+  .room-chapter{padding-top:calc(44svh + 44px)}
+  .room-footer{gap:16px}.room-footer>span{width:100%}
+  .core-detail-grid,.core-detail-grid-small{grid-template-columns:1fr}
+  .core-intro h1{font-size:clamp(40px,10vw,68px)}
+  .core-intro-links{gap:10px}
+  .footer{flex-wrap:wrap;gap:16px}
+  .mission-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #mission-entry .mission-home .entry-center{min-height:0}
+  #mission-entry .mission-home .entry-center h1{font-size:clamp(40px,10vw,68px);line-height:1.02}
+  #mission-entry .mission-home .entry-center>p{font-size:12px;line-height:1.6}
+  #mission-entry .mission-home .entry-mark{width:126px;height:54px;margin-bottom:12px}
+  #mission-entry .mission-home .mission-grid button{min-height:72px;padding:10px}
+  #mission-entry .mission-home .entry-launch{min-height:44px;margin-top:16px}
+  #mission-entry .mission-feature-copy h2{font-size:clamp(32px,9vw,52px)}
+  #mission-entry .mission-feature-layout{gap:16px}
+  #mission-entry .mission-feature-copy p{font-size:12px;line-height:1.6}
+  #mission-entry .mission-feature .entry-launch{min-height:44px}
+  .room-landing-nav>div>a{min-height:44px;display:inline-flex;align-items:center}
+  .mission-hud-top .hud-status{margin-right:50px}
+  .mission-hud-bottom{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+  .mission-hud-bottom>span:last-child{white-space:nowrap}
+  .mission-hud-bottom>span:last-child:after{content:none}
+  .mission-hud-bottom .hud-objective{text-align:center}
+}
+@media(max-width:400px){
+  .topbar{padding:8px 12px}.top-actions{gap:6px}.top-actions .coin-pill{font-size:9px;padding:7px}.top-up-button{padding:8px;font-size:10px}.theme-label{display:none}.account-button{max-width:100px;padding:8px!important}
+  .doc-view h1{font-size:32px}.doc-view pre[data-code-language]{font-size:11px!important;padding-inline:12px!important}
+  .call-estimate-output{grid-template-columns:1fr}.call-estimate-output>div{padding:16px}.call-estimate-output strong{font-size:28px}
+  .code-run{max-width:calc(100% - 118px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;padding:7px}
+  .design-card-grid,.css-demo-buttons{grid-template-columns:1fr}.design-sample-card{min-height:190px}
+  .doc-view .css-coming-soon{flex-wrap:wrap;gap:8px}
+  .doc-mini-card,.endpoint-card,.pricing-card,.external-api-card{padding:16px}
+  .endpoint-meta{gap:8px}.endpoint-meta code{font-size:10px;white-space:normal}
+  .room-jump-controls{left:14px;right:14px;gap:4px}.room-jump-controls button{min-height:36px;padding:8px 9px}
+  .room-heading h1{font-size:38px}.room-chapter h2{font-size:32px}
+}
+@media(max-height:650px) and (orientation:landscape){
+  #mission-entry .mission-home .entry-mark{display:none}
+  #mission-entry .mission-home .entry-center h1{font-size:clamp(34px,7vh,56px);margin:8px 0}
+  #mission-entry .mission-home .entry-kicker{font-size:8px}
+  #mission-entry .mission-home .mission-grid{margin-top:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
+  #mission-entry .mission-home .mission-grid button{min-height:62px}
+  #mission-entry .mission-home .mission-grid small{display:none}
+  #mission-entry .mission-home .entry-launch{margin-top:10px;min-height:40px}
+  #mission-entry .mission-feature-layout{grid-template-columns:1fr 1fr;gap:20px}
+  #mission-entry .mission-feature{padding:30px 20px}
+  #mission-entry .feature-terminal,#mission-entry .feature-agent,#mission-entry .feature-radar{min-height:150px}
+  #mission-entry .mission-feature-copy h2{font-size:32px}
+  #mission-entry .mission-feature-copy p{font-size:11px}
+  .room-stage{min-height:230px;height:65svh}
+  .auth-dialog{max-height:calc(100dvh - 24px)}
+}
+@media(max-height:650px) and (orientation:portrait){#mission-entry .mission-home .entry-mark{display:none}#mission-entry .mission-home .mission-grid{margin-top:10px}#mission-entry .mission-home .mission-grid button{min-height:60px;padding:8px}#mission-entry .mission-home .entry-center h1{font-size:40px;margin:10px 0}#mission-entry .mission-home .mission-grid small{font-size:8px}}
+@media(pointer:coarse){.mission-reticle{display:none}}
+@media(hover:hover) and (pointer:fine){.button-primary,.entry-launch,.doc-cta{transition:filter .2s,box-shadow .2s}.button-primary:hover,.entry-launch:hover{filter:brightness(1.1);box-shadow:0 8px 24px #63d8b922}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.mission-reticle{display:none}.entry-orbit{animation:none!important}body[data-page="landing"] .mission-entry{filter:none;transform:none}body[data-page="landing"] .developer-room-landing{transform:none}}
