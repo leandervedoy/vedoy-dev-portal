@@ -127,6 +127,8 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
 
 function routePath(req) {
   const url = new URL(req.url, "https://portal.local");
+  const rewritten = url.searchParams.get("__vedoy_route");
+  if (rewritten) return `/v1/${rewritten.replace(/^\/+/, "")}`;
   return url.pathname.replace(/^\/api/, "") || "/";
 }
 
