@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { query, transaction } from "../lib/database.js";
+import { catalogHandler } from "../lib/public-catalog.js";
 import { deliverWebhook, emitWebhookEvent, webhookEndpointSecret } from "../lib/webhooks.js";
 import {
   normalizeAvailableNumber,
@@ -225,6 +226,9 @@ async function finishProviderOperation(operation, { status, responsePayload, err
 export default async function handler(req, res) {
   const path = routePath(req);
   try {
+    if (path === "/v1/pricing" || path === "/v1/site-content") {
+      return catalogHandler(req, res, path === "/v1/pricing" ? "prices" : "content");
+    }
     if (req.method === "OPTIONS") return send(res, 204, {});
     if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
       const database = await query(
