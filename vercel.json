@@ -7,6 +7,14 @@
   },
   "rewrites": [
     {
+      "source": "/api/v1/pricing",
+      "destination": "/api/v1/models?__vedoy_route=pricing"
+    },
+    {
+      "source": "/api/v1/site-content",
+      "destination": "/api/v1/models?__vedoy_route=site-content"
+    },
+    {
       "source": "/api/v1/webhooks/:path*",
       "destination": "/api/v1/models?__vedoy_route=webhooks/:path*"
     },
@@ -19,8 +27,14 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
       ]
     }
   ]

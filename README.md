@@ -42,6 +42,13 @@ Neon currently has no Norway database region. Do not describe a Frankfurt Neon d
 
 Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 
+### Central pricing and content (public, read-only)
+
+- `GET /v1/pricing` — published catalog; optional `category=studio|assist|growth|campaign` and `code=nettside-drift`
+- `GET /v1/site-content` — published headlines and copy, optionally `content_key=home.hero`
+- These endpoints use the existing API gateway function and Supabase RLS. Updates take place exclusively in Vedøy Manager with server-side authorization; callers cannot edit prices through these public routes.
+
+
 - `GET /v1/health`
 - `GET|POST /v1/projects`
 - `POST /v1/projects/{projectId}/api-keys`
