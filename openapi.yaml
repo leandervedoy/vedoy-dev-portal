@@ -9,6 +9,83 @@ servers:
   - url: https://vedoy-dev-portal.vercel.app/api
     description: Production API
 paths:
+  /v1/deliver/providers:
+    get:
+      tags: [Delivery]
+      summary: List delivery and carrier integrations and their readiness
+      description: Descriptive catalogue only; providers without configured adapters cannot be used for live orders.
+      security:
+        - vedoyApiKey: []
+      responses:
+        '200':
+          description: Provider capabilities, runtime readiness and booking status
+        '401':
+          description: Invalid or missing project API key
+  /v1/deliver/quotes:
+    post:
+      tags: [Delivery]
+      summary: Request an estimated delivery price
+      description: >
+        Wolt Drive venueful shipment promise only. Requires merchant credentials
+        and a configured venue. Does not create a delivery, charge Vedoy Credits,
+        or guarantee availability. Other carriers return 503 pending integration.
+      security:
+        - vedoyApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dropoff]
+              properties:
+                provider:
+                  type: string
+                  enum: [wolt-drive, bring, helthjem, postnord, porterbuddy, nshift, foodora, uber-direct]
+                  default: wolt-drive
+                preparationMinutes:
+                  type: integer
+                  minimum: 0
+                  maximum: 60
+                scheduledDropoffTime:
+                  type: string
+                  format: date-time
+                dropoff:
+                  type: object
+                  required: [street]
+                  properties:
+                    street:
+                      type: string
+                      description: Street name and house number
+                    city:
+                      type: string
+                    postCode:
+                      type: string
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+      responses:
+        '200':
+          description: Wolt shipment promise estimate in provider-native minor currency units (not a checkout price)
+        '422':
+          description: Invalid provider, address or quote options
+        '503':
+          description: Provider has not been configured or enabled
+        '502':
+          description: Carrier unavailable or incompatible response
+  /v1/deliver/orders:
+    post:
+      tags: [Delivery]
+      summary: Reserve and book a delivery (disabled)
+      description: >
+        Intentionally returns 503 without contacting a carrier until idempotent
+        booking, quote storage, billing and reconciliation have been reviewed.
+      security:
+        - vedoyApiKey: []
+      responses:
+        '503':
+          description: Booking capability is not enabled
   /v1/health:
     get:
       summary: Service health and provider readiness
