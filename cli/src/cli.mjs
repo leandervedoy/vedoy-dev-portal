@@ -8,7 +8,7 @@ const help = `Vedoy CLI v0.1 (safe local MVP)
   vedoy sync                Fetch remote Git changes (no merge)
   vedoy ship --dry-run      Preview checks and deployment (no deployment yet)
   vedoy connect             Show portal configuration (never secrets)
-  vedoy control <resource>  GET Developer Portal API data (health, projects, usage, credits, limits, models, numbers, agents)
+  vedoy control permissions  Show planned write scopes (no writes enabled)\n  vedoy control write plan <action>  Preview a future write action\n  vedoy control <resource>  GET Developer Portal API data (health, projects, usage, credits, limits, models, numbers, agents)
   vedoy control api get <resource> [--json]  Explicit read-only API retrieval
   vedoy help                Show this help
 Environment: VEDOY_PORTAL_URL (defaults to https://vedoy-dev-portal.vercel.app)
@@ -26,6 +26,15 @@ export async function run(argv, io = console, cwd = process.cwd(), executeGit = 
   const [cmd, ...args] = argv;
   const portal = process.env.VEDOY_PORTAL_URL || 'https://vedoy-dev-portal.vercel.app';
   if (!cmd || cmd === 'help' || cmd === '--help') return io.log(help);
+  if (cmd === 'control' && args[0] === 'permissions') {
+    if (args.length !== 1) throw new Error('Usage: vedoy control permissions');
+    return io.log(JSON.stringify({status:'planned',writeEnabled:false,scopes:['projects:write','deployments:write','backups:write','servers:admin'],requirements:['short-lived scoped token','server-side authorization','audit log','idempotency key','approval for production or destructive changes']},null,2));
+  }
+  if (cmd === 'control' && args[0] === 'write') {
+    const actions = { 'project-create':{scope:'projects:write',approval:'standard'},'deploy':{scope:'deployments:write',approval:'production'},'backup-create':{scope:'backups:write',approval:'standard'},'server-restart':{scope:'servers:admin',approval:'critical'} };
+    if (args[1] !== 'plan' || !Object.hasOwn(actions,args[2]) || args.length !== 3) throw new Error('Usage: vedoy control write plan project-create|deploy|backup-create|server-restart');
+    return io.log(JSON.stringify({action:args[2],...actions[args[2]],status:'not-implemented',executed:false,requirements:['authenticated principal','server-side RBAC','audit trail','explicit approval','idempotency']},null,2));
+  }
   if (cmd === 'control') {
     const resource = args[0] === 'api' && args[1] === 'get' ? args[2] : args[0];
     const flags = args[0] === 'api' ? args.slice(3) : args.slice(1);
