@@ -8,6 +8,8 @@ const help = `Vedoy CLI v0.1 (safe local MVP)
   vedoy sync                Fetch remote Git changes (no merge)
   vedoy ship --dry-run      Preview checks and deployment (no deployment yet)
   vedoy connect             Show portal configuration (never secrets)
+  vedoy control <resource>  GET Developer Portal API data (health, projects, usage, credits, limits, models, numbers, agents)
+  vedoy control api get <resource> [--json]  Explicit read-only API retrieval
   vedoy help                Show this help
 Environment: VEDOY_PORTAL_URL (defaults to https://vedoy-dev-portal.vercel.app)
 `;
@@ -24,6 +26,20 @@ export async function run(argv, io = console, cwd = process.cwd(), executeGit = 
   const [cmd, ...args] = argv;
   const portal = process.env.VEDOY_PORTAL_URL || 'https://vedoy-dev-portal.vercel.app';
   if (!cmd || cmd === 'help' || cmd === '--help') return io.log(help);
+  if (cmd === 'control') {
+    const resource = args[0] === 'api' && args[1] === 'get' ? args[2] : args[0];
+    const flags = args[0] === 'api' ? args.slice(3) : args.slice(1);
+    const routes = {health:'/v1/health',projects:'/v1/projects',usage:'/v1/usage',credits:'/v1/credits/balance',limits:'/v1/rate-limits',models:'/v1/models',numbers:'/v1/numbers',agents:'/v1/agents'};
+    if (!Object.hasOwn(routes,resource) || flags.some(f=>f!=='--json')) throw new Error('Unsupported read-only resource or flag. Use vedoy control health|projects|usage|credits|limits|models|numbers|agents [--json]');
+    const base = (process.env.VEDOY_API_URL || portal+'/api').replace(/\\/$/,'');
+    const headers = {Accept:'application/json'};
+    if (process.env.VEDOY_ACCESS_TOKEN) headers.Authorization = 'Bearer '+process.env.VEDOY_ACCESS_TOKEN;
+    const response = await fetch(base+routes[resource],{method:'GET',headers,redirect:'error'});
+    const body = await response.text();
+    if (!response.ok) throw new Error('API '+response.status+': '+body.slice(0,240));
+    let data; try { data=JSON.parse(body) } catch { throw new Error('API did not return JSON') }
+    return io.log(JSON.stringify(data,null,2));
+  }
   if (cmd === 'connect') return io.log('Developer Portal: ' + portal + '\nAuthentication is not yet implemented; no credentials are stored.');
   if (cmd === 'ship') {
     if (args.length !== 1 || args[0] !== '--dry-run') throw new Error('Only vedoy ship --dry-run is supported until authenticated deploy is implemented.');
