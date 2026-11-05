@@ -50,3 +50,17 @@ node bin/vedoy.mjs control api get projects --json
 Configure `VEDOY_ACCESS_TOKEN` with an appropriately scoped token for protected endpoints. The default API base is `https://vedoy-dev-portal.vercel.app/api`; override using `VEDOY_API_URL`. The API may reject requests if the token type or permissions do not match the endpoint.
 
 No write operations, Gitea deployment, backup, device authorization, or automatic production changes are implemented. The CLI is on a feature branch and is not yet released or verified in production.
+
+## Future write permissions (scaffold only)
+
+```bash
+node bin/vedoy.mjs control permissions
+node bin/vedoy.mjs control write plan project-create
+node bin/vedoy.mjs control write plan deploy
+node bin/vedoy.mjs control write plan backup-create
+node bin/vedoy.mjs control write plan server-restart
+```
+
+The above commands **never send API write requests**. They only display proposed scopes and approval requirements. Planned scopes: `projects:write`, `deployments:write`, `backups:write`, `servers:admin`.
+
+Before enabling writes, the server must enforce scoped authorization per project, audit every change, use idempotency for retryable operations, and require explicit confirmation for production deployments, destructive changes and server restarts. CLI checks are advisory, not a substitute for server enforcement.
