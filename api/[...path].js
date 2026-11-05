@@ -1,3 +1,4 @@
+import { deliveryProviders, requestWoltQuote } from "../lib/delivery.js";
 import { createHash, randomBytes } from "node:crypto";
 import { query, transaction } from "../lib/database.js";
 import { catalogHandler } from "../lib/public-catalog.js";
@@ -251,6 +252,35 @@ export default async function handler(req, res) {
           phoneNumbers: { ready: telnyxReady && schemaReady, schemaReady, grossMarginBps: pricing.grossMarginBps },
         },
         docs: "/openapi.yaml",
+      });
+    }
+    if (req.method === "GET" && path === "/v1/deliver/providers") {
+      const auth = await authorizeApiKey(req, path, 0);
+      return send(res, 200, {
+        data: deliveryProviders(),
+        bookingEnabled: false,
+        note: "All providers are listed for planning. Only configured Wolt Drive shipment promises can return live price estimates; bookings are disabled.",
+        projectId: auth.project_id
+      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/deliver/quotes") {
+      const auth = await authorizeApiKey(req, path, 0);
+      const input = await body(req);
+      const provider = String(input.provider || "wolt-drive").trim().toLowerCase();
+      if (!deliveryProviders().some(item => item.id === provider)) {
+        return send(res, 422, { error: { code: "unknown_delivery_provider", message: "Choose a provider from GET /v1/deliver/providers." } });
+      }
+      if (provider !== "wolt-drive") {
+        return send(res, 503, { error: { code: "delivery_provider_not_configured", message: "This provider is listed for integration but its live quote adapter is not yet enabled." } });
+      }
+      const quote = await requestWoltQuote(input);
+      return send(res, 200, { data: quote, projectId: auth.project_id }, { "Cache-Control": "no-store", "X-RateLimit-Remaining": String(auth.remaining_requests) });
+    }
+    if (req.method === "POST" && path === "/v1/deliver/orders") {
+      const auth = await authorizeApiKey(req, path, 0);
+      return send(res, 503, {
+        error: { code: "delivery_booking_not_enabled", message: "Paid delivery bookings are disabled until provider agreements, verified pricing, idempotency and delivery reconciliation are implemented." },
+        projectId: auth.project_id
       });
     }
     if (req.method === "GET" && path === "/v1/projects") {
