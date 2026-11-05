@@ -29,3 +29,24 @@ Login, project selection, remote jobs, Gitea, Coolify, Kopia, Vedi AI, deploymen
 Use the portal's existing `/api/v1/projects` and bearer-token auth as the starting point. Add explicit CLI device authorization, narrowly scoped short-lived tokens, server-side job queue, audit log and approval gate before deploying. Never send provider secrets to the CLI.
 
 This directory is isolated from the portal's production application and does not change its existing API or build pipeline.
+
+
+## Vedoy Control API commands
+
+The CLI reuses the existing Developer Portal REST API. Supported **read-only** commands:
+
+```bash
+node bin/vedoy.mjs control health
+node bin/vedoy.mjs control projects
+node bin/vedoy.mjs control usage
+node bin/vedoy.mjs control credits
+node bin/vedoy.mjs control limits
+node bin/vedoy.mjs control models
+node bin/vedoy.mjs control numbers
+node bin/vedoy.mjs control agents
+node bin/vedoy.mjs control api get projects --json
+```
+
+Configure `VEDOY_ACCESS_TOKEN` with an appropriately scoped token for protected endpoints. The default API base is `https://vedoy-dev-portal.vercel.app/api`; override using `VEDOY_API_URL`. The API may reject requests if the token type or permissions do not match the endpoint.
+
+No write operations, Gitea deployment, backup, device authorization, or automatic production changes are implemented. The CLI is on a feature branch and is not yet released or verified in production.
