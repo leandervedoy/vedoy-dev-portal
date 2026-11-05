@@ -92,3 +92,11 @@ Webhook destinations must be public HTTPS URLs; local and private-network target
 Agent definitions and runs are project-scoped. The control plane stores instructions, model selection, status and a monthly budget guard. Runs fail closed as `blocked` with `agent_runner_not_configured` until a reviewed server-side runner and provider billing adapter are connected; the portal does not silently make an AI provider call.
 
 See `openapi.yaml` for the complete current contract.
+
+## Vedoy Deliver integrations (preview)
+
+The developer API includes `GET /v1/deliver/providers`, `POST /v1/deliver/quotes`, and a deliberately disabled `POST /v1/deliver/orders`. All routes require a project-scoped Vedoy API key; keep this key server-side. A provider catalogue lists Wolt Drive, Bring, Helthjem, PostNord, Porterbuddy, nShift, foodora Partner API and Uber Direct with explicit readiness statuses.
+
+Only Wolt Drive shipment promises have an upstream quote adapter. Set `WOLT_DRIVE_API_KEY` and `WOLT_DRIVE_VENUE_ID` from your merchant agreement. The default `WOLT_DRIVE_ENV=development` uses the official sandbox origin. For production quotes set `WOLT_DRIVE_ENV=production` and `WOLT_DRIVE_LIVE_QUOTES_ENABLED=true` deliberately. The Wolt provider response is an estimate in native minor currency units; this is **not** a customer checkout price, nor confirmation that a courier was booked. Provider billing, order persistence, reconciliation and tracking are not implemented. Quote and booking responses must never be treated as proof of dispatch.
+
+All other provider adapters are documentation-only, even if credentials exist elsewhere. Bring food transport and any city-specific availability must be confirmed with the carrier. Uber Direct is not currently offered in Norway. Never collect a delivery payment or promise a courier through this API until approved booking and idempotency workflows are deployed.
