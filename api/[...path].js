@@ -2,6 +2,7 @@ import { deliveryProviders, requestWoltQuote } from "../lib/delivery.js";
 import { createHash, randomBytes } from "node:crypto";
 import { query, transaction } from "../lib/database.js";
 import { catalogHandler } from "../lib/public-catalog.js";
+import { handleAppModuleRoutes } from "../lib/app-modules-api.js";
 import { deliverWebhook, emitWebhookEvent, webhookEndpointSecret } from "../lib/webhooks.js";
 import {
   normalizeAvailableNumber,
@@ -231,6 +232,7 @@ export default async function handler(req, res) {
       return catalogHandler(req, res, path === "/v1/pricing" ? "prices" : "content");
     }
     if (req.method === "OPTIONS") return send(res, 204, {});
+    if (await handleAppModuleRoutes({ req,res,path,query,body,send,requireUser,authorizeApiKey })) return;
     if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
       const database = await query(
         `select current_database() as name,
