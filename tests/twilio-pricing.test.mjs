@@ -14,27 +14,15 @@ test("credit conversion rounds up to whole credits", () => {
 test("available number prices hide provider math from the public shape", () => {
   const result = normalizeAvailableNumber({
     phone_number: "+4721000000",
-    phone_number_type: "local",
-    features: ["sms", "voice"],
-    cost_information: { currency: "USD", monthly_cost: "1.00", upfront_cost: "0.40" },
-  }, { grossMarginBps: 2000, creditUsdMicros: 10_000 });
+    capabilities: { SMS: true, voice: true },
+  }, {
+    grossMarginBps: 2000,
+    creditUsdMicros: 10_000,
+    numberMonthlyUsdMicros: 1_000_000,
+    numberUpfrontUsdMicros: 400_000,
+  });
   assert.equal(result.customerMonthlyMicros, 1_250_000);
   assert.equal(result.customerUpfrontCredits, 50);
-});
-
-test("provider prices are parsed without floating-point rounding", () => {
-  const result = normalizeAvailableNumber({
-    phone_number: "+4721000000",
-    cost_information: { currency: "USD", monthly_cost: "0.000001", upfront_cost: "0.000001" },
-  }, { grossMarginBps: 2000, creditUsdMicros: 10_000 });
-  assert.equal(result.providerMonthlyMicros, 1);
-  assert.equal(result.customerMonthlyMicros, 2);
-});
-
-test("available numbers without recurring prices cannot be quoted", () => {
-  assert.throws(
-    () => normalizeAvailableNumber({ phone_number: "+4721000000" }, { grossMarginBps: 2000, creditUsdMicros: 10_000 }),
-    { code: "provider_pricing_unavailable", status: 502 },
-  );
+  assert.deepEqual(result.features, ["sms", "voice"]);
 });
 
