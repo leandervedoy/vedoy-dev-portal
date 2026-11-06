@@ -100,3 +100,19 @@ The developer API includes `GET /v1/deliver/providers`, `POST /v1/deliver/quotes
 Only Wolt Drive shipment promises have an upstream quote adapter. Set `WOLT_DRIVE_API_KEY` and `WOLT_DRIVE_VENUE_ID` from your merchant agreement. The default `WOLT_DRIVE_ENV=development` uses the official sandbox origin. For production quotes set `WOLT_DRIVE_ENV=production` and `WOLT_DRIVE_LIVE_QUOTES_ENABLED=true` deliberately. The Wolt provider response is an estimate in native minor currency units; this is **not** a customer checkout price, nor confirmation that a courier was booked. Provider billing, order persistence, reconciliation and tracking are not implemented. Quote and booking responses must never be treated as proof of dispatch.
 
 All other provider adapters are documentation-only, even if credentials exist elsewhere. Bring food transport and any city-specific availability must be confirmed with the carrier. Uber Direct is not currently offered in Norway. Never collect a delivery payment or promise a courier through this API until approved booking and idempotency workflows are deployed.
+
+## App Modules (2026-11-06 beta)
+
+Open **Developer Portal → Platform APIs → App Modules** (`#app-modules`). Create a developer project in `#developer-api` first, then choose the project in the App Modules workspace. Each project owns its modules, selected games, API keys, metering and highscores.
+
+**Setup:** 1) Register app/project. 2) Activate Game Library (included catalog metadata only). 3) Choose Chess, Tic-Tac-Toe, Connect Four, Word Guess, Snake, Sudoku Mini or 2048. 4) Activate Highscore API only after a manually verified active project subscription. 5) Generate a project API key through the Developer API console and keep it on your server. 6) Inspect the API list shown inside the module workspace.
+
+**Public:** `GET /api/v1/modules`, `GET /api/v1/rewards/games` (catalogs; the playable game engines have not moved from Collective yet).
+
+**User-scoped (Supabase sign-in):** `GET /api/v1/projects/{id}/modules`, `PUT|DELETE /api/v1/projects/{id}/modules/{moduleKey}`, `PUT|DELETE /api/v1/projects/{id}/games/{gameKey}`.
+
+**Project API key (server only, subscription required):** `GET /api/v1/rewards/highscores?game=snake`, `POST /api/v1/rewards/highscores` using `Authorization: Bearer $VEDOY_API_KEY`, `Idempotency-Key` and JSON `{ "game":"snake", "playerAlias":"Player", "score":120 }`.
+
+The Highscore API is **beta and unverified**. Scores supplied by a developer backend are not proof of game completion and do not grant Vedoy Coins. `Vedoy Credits` are a separate metered API billing unit, not a game reward. Premium activation fails closed when no project subscription record is active; there is no self-service Stripe checkout in this release. Manual subscriptions must be configured by an authorized operator. Existing production APIs are not automatically switched to this new entitlement system during the staged migration.
+
+The app module database is provisioned through `migrations/004_app_modules.sql`, included in `npm run db:migrate`. No full Stripe Billing subscription lifecycle or game-engine SDK has been shipped. Exercise caution before presenting catalog entries as working hosted games.
