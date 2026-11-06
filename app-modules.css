@@ -1,0 +1,39 @@
+/* App Modules scoped responsive UI */
+.app-modules-workspace{max-width:1100px;margin:0 auto;padding-bottom:64px}
+.app-module-hero{display:flex;gap:25px;justify-content:space-between;align-items:center;border-radius:20px;padding:28px;background:linear-gradient(130deg,#102d24,#216a4a);color:#fff}
+.app-module-hero h2{font-size:clamp(28px,5vw,48px);line-height:1.1;margin:14px 0;color:#fff}
+.app-module-hero h2 em{font-style:normal;color:#bdedc2}
+.app-module-hero p{max-width:590px;color:#e6f7e9;line-height:1.6}
+.app-credits-pill{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid #90c7a7;border-radius:12px;min-width:205px}
+.app-credits-pill img{width:46px;height:46px;object-fit:contain}
+.app-credits-pill strong,.app-credits-pill small{display:block}.app-credits-pill small{font-size:11px;line-height:1.5}
+.app-module-steps{display:flex;align-items:stretch;gap:10px;margin:22px 0}
+.app-module-steps>div{flex:1;border:1px solid #b4cdbd;border-radius:12px;padding:14px;display:flex;gap:9px;flex-direction:column;min-width:0}
+.app-module-steps b{color:#238052}.app-module-steps small{opacity:.75}
+.app-module-steps>span{align-self:center}
+.app-module-signin,.app-module-selector,.app-module-subscription,.app-module-guide{padding:20px;margin:15px 0;border:1px solid #b4cdbd;border-radius:14px}
+.app-module-selector,.app-module-subscription{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.app-module-selector label{display:block;font-weight:700;font-size:12px;margin-bottom:8px}
+.app-module-selector select{max-width:100%;min-width:220px;padding:11px;border:1px solid #8bbaa0;border-radius:9px;background:var(--white,#fff);color:#183e2b}
+.app-module-selector p,.app-module-subscription p{font-size:13px;margin:8px 0;opacity:.8}
+.app-module-subscription{background:#e5f2e8;color:#1c4b31}
+.app-module-subscription a{color:#14583b}
+.app-module-section-head{margin:30px 0 14px}.app-module-section-head h2{font-size:28px;margin:8px 0}.app-module-section-head p{line-height:1.6}
+.app-module-card-grid,.app-game-grid,.app-module-guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:13px}
+.app-module-card{border:1px solid #c9d9cd;border-radius:15px;padding:19px;display:flex;flex-direction:column;gap:11px;background:var(--white,#fff);min-width:0}
+.app-module-icon,.app-game-symbol{font-size:30px}
+.app-module-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.app-module-heading h3{margin:0;font-size:17px}
+.app-module-tier{font-size:11px;border-radius:20px;padding:5px 9px;background:#e4f2e6;color:#245a3e}.app-module-tier.premium{background:#faedc9;color:#75501d}
+.app-module-card p{flex:1;line-height:1.6;font-size:13px;margin:0}.app-module-card small{font-size:11px}
+.app-module-bottom{display:flex;flex-wrap:wrap;gap:7px}.app-module-bottom button{font-size:12px;padding:10px}
+.app-game-option{display:flex;align-items:center;gap:10px;border:1px solid #c9d9cd;border-radius:12px;padding:12px;min-width:0}
+.app-game-option>div:nth-child(2){flex:1}.app-game-option small{display:block;font-size:10px}
+.app-game-option button{padding:9px;border:1px solid #7cad8f;background:#e6f4e9;color:#185d39;border-radius:8px;font-weight:700}.app-game-option button[aria-pressed=true]{background:#16613d;color:#fff}
+.app-endpoints,.app-module-inspector{border:1px solid #b4cdbd;border-radius:14px;padding:17px;overflow-wrap:anywhere}
+.app-endpoint-group{padding:12px 0;border-bottom:1px solid #c9d9cd}.app-endpoint-group:last-child{border-bottom:0}
+.app-endpoint-group code{display:block;white-space:pre-wrap;font-size:12px;margin:6px 0}
+.app-module-inspector{background:#e9f4e9;color:#1d462f;margin-top:14px}.app-module-inspector pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.app-module-guide-grid article{border:1px solid #c9d9cd;border-radius:12px;padding:15px;min-width:0}
+.app-module-guide-grid article p{line-height:1.6;font-size:13px}.app-module-guide-grid pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.app-module-message[data-error=true]{color:#bd3c36}
+@media(max-width:720px){.app-module-hero,.app-module-selector,.app-module-subscription{flex-direction:column;align-items:stretch}.app-module-steps{flex-direction:column}.app-module-steps>span{transform:rotate(90deg)}.app-module-card-grid,.app-game-grid,.app-module-guide-grid{grid-template-columns:1fr}.app-module-selector select{width:100%;min-width:0}.app-credits-pill{min-width:0}}
