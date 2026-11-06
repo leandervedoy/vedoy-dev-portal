@@ -22,7 +22,7 @@ function send(res, status, payload, headers = {}) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("X-Vedoy-API-Version", API_VERSION);
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type,Idempotency-Key");
   Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
   res.end(JSON.stringify(payload));
