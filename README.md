@@ -14,7 +14,7 @@ The canonical developer site and API surface for Vedøy. Vedøy Phone is separat
 - Portable PostgreSQL schema for Neon now and Norwegian hosting later
 - OpenAPI 3.1 contract in `openapi.yaml`
 
-Telnyx number search, number purchase and outbound SMS are implemented behind Vedøy API keys. They activate when the server has Telnyx credentials and the production migration has run. Payment, AI and maritime provider operations remain unavailable until their adapters are enabled.
+Twilio number search, number purchase and outbound SMS are implemented behind Vedøy API keys. Stripe-hosted credit checkout and OpenAI-backed chat and embeddings activate only when their server-side credentials, verified pricing and production migrations are configured.
 
 ## Local setup
 
@@ -22,15 +22,15 @@ Telnyx number search, number purchase and outbound SMS are implemented behind Ve
 2. Add the public Supabase values used for the existing login.
 3. Add a pooled `DATABASE_URL` and a direct `DATABASE_URL_UNPOOLED` from Neon or another PostgreSQL host.
 4. Run `npm run db:migrate` once with the direct connection.
-5. Configure `TELNYX_API_KEY`, the Telnyx webhook public key and the messaging profile ID on the server.
-6. Configure `TELNYX_SMS_PROVIDER_USD_MICROS` from the applicable Telnyx tariff before enabling SMS.
+5. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_AUTH_TOKEN` and the optional Messaging Service SID on the server.
+6. Configure `TWILIO_SMS_PROVIDER_USD_MICROS` from the applicable Twilio tariff before enabling SMS.
 7. Set `VEDOY_WEBHOOK_SIGNING_SECRET` to a random server-only value of at least 32 characters before creating webhooks.
 8. Run `npx vercel dev` so the static frontend and `/api` functions share one origin.
 9. Run `npm run check` before committing.
 
 The browser receives only the Supabase publishable key. PostgreSQL credentials stay in Vercel Functions. Never commit database URLs, service-role keys, carrier credentials or provider secrets.
 
-For deployed number search and purchase, configure `TELNYX_API_KEY`, `DATABASE_URL`, and `VEDOY_GROSS_MARGIN_BPS=2000` in the server environment, then apply the migrations with `DATABASE_URL_UNPOOLED`. `GET /api/v1/health` reports whether Telnyx and the required database schema are ready. Number quotes are priced from Telnyx's current USD cost and expire after ten minutes; purchase charges the upfront cost plus the first month at the quoted customer price.
+For deployed number search and purchase, configure the Twilio server credentials, verified `TWILIO_NUMBER_*_USD_MICROS` values, `DATABASE_URL`, and `VEDOY_GROSS_MARGIN_BPS=2000` in the server environment, then apply the migrations with `DATABASE_URL_UNPOOLED`. `GET /api/v1/health` reports provider, schema, model and billing readiness. Number quotes use verified cost inputs and expire after ten minutes; purchase charges the upfront cost plus the first month at the quoted customer price.
 
 ## Data residency
 
@@ -55,8 +55,11 @@ Production base URL: `https://vedoy-dev-portal.vercel.app/api`
 - `GET /v1/projects/{projectId}/api-keys`
 - `DELETE /v1/projects/{projectId}/api-keys/{keyId}`
 - `GET /v1/models`
-- `POST /v1/chat/completions` (echo demo only)
-- `POST /v1/embeddings` (random-vector demo only)
+- `POST /v1/chat/completions` (OpenAI-backed when configured)
+- `POST /v1/embeddings` (OpenAI-backed when configured)
+- `GET /v1/billing/products`
+- `POST /v1/billing/checkout`
+- `GET /v1/billing/overview`
 - `GET /v1/numbers/available`
 - `GET /v1/numbers`
 - `POST /v1/numbers/purchase`
@@ -77,11 +80,11 @@ trusted servers, never in browser or mobile bundles. JSON requests use
 `Content-Type: application/json`. Number purchase, SMS send, and agent-run
 requests require an `Idempotency-Key` header.
 
-## Telnyx pricing
+## Twilio pricing
 
-`VEDOY_GROSS_MARGIN_BPS=2000` targets a 20% gross margin. Customer price is calculated as provider cost divided by `0.80`, then rounded up to whole Vedøy Credits using `VEDOY_CREDIT_USD_MICROS` (default: USD 0.01 per Credit). This is a margin calculation, not a 20% markup. Number quotes use current Telnyx inventory costs and expire after ten minutes. SMS is disabled until an explicit provider cost is configured because destination and carrier fees vary.
+`VEDOY_GROSS_MARGIN_BPS=2000` targets a 20% gross margin. Customer price is calculated as provider cost divided by `0.80`, then rounded up to whole Vedøy Credits using `VEDOY_CREDIT_USD_MICROS` (default: USD 0.01 per Credit). This is a margin calculation, not a 20% markup. Number quotes use explicit verified Twilio cost inputs and expire after ten minutes. Number sales and SMS remain disabled until provider costs are configured because destination and carrier fees vary.
 
-Provider operations require an `Idempotency-Key`. Credits are reserved before Telnyx is called. Deterministic failures receive an automatic ledger refund; timeouts and provider 5xx responses are marked `unknown` for reconciliation rather than being retried blindly.
+Provider operations require an `Idempotency-Key`. Credits are reserved before Twilio is called. Deterministic failures receive an automatic ledger refund; timeouts and provider 5xx responses are marked `unknown` for reconciliation rather than being retried blindly.
 
 ## Notify webhooks
 

@@ -3,8 +3,8 @@ info:
   title: Vedøy Developer API
   version: 2026-10-09
   description: >
-    Developer control-plane and project APIs. Chat and embedding endpoints are
-    demonstrations only; they do not call model providers.
+    Developer control-plane and project APIs. Chat and embedding routes use the
+    configured server-side model provider and fail closed when it is unavailable.
 servers:
   - url: https://vedoy-dev-portal.vercel.app/api
     description: Production API
@@ -314,13 +314,13 @@ paths:
         - vedoyApiKey: []
       responses:
         '200':
-          description: Model catalogue, including planned and preview entries
+          description: Model catalogue with live provider readiness
         '401':
           description: Missing or invalid API key
   /v1/chat/completions:
     post:
-      summary: Echo-style chat demonstration
-      description: Returns a demo echo. No AI provider is called and no model inference is performed.
+      summary: Create a model-backed chat completion
+      description: Uses the server-side OpenAI provider configured by Vedøy. Customer API keys never expose provider credentials.
       security:
         - vedoyApiKey: []
       requestBody:
@@ -346,13 +346,13 @@ paths:
                         type: string
       responses:
         '200':
-          description: Demo chat completion
+          description: Model-backed chat completion
         '422':
           description: Messages array is empty
   /v1/embeddings:
     post:
-      summary: Random-vector embedding demonstration
-      description: Returns random values, not embeddings from a model. Do not use as semantic vectors.
+      summary: Create semantic embeddings
+      description: Returns semantic vectors from the configured server-side OpenAI embedding model.
       security:
         - vedoyApiKey: []
       requestBody:
@@ -370,12 +370,12 @@ paths:
                   type: string
       responses:
         '200':
-          description: Demonstration vector with 1536 random dimensions
+          description: Semantic vector with 1536 dimensions
         '422':
           description: Input text is required
   /v1/numbers/available:
     get:
-      summary: Search live Telnyx number inventory and create short-lived Vedøy quotes
+      summary: Search live Twilio number inventory and create short-lived Vedøy quotes
       security:
         - vedoyApiKey: []
       parameters:
@@ -404,7 +404,7 @@ paths:
         '401':
           description: Missing or invalid API key
         '503':
-          description: Telnyx or required database schema is not configured
+          description: Twilio or required database schema is not configured
   /v1/numbers:
     get:
       summary: List numbers owned by the API-key project
@@ -415,7 +415,7 @@ paths:
           description: Project number list
   /v1/numbers/purchase:
     post:
-      summary: Purchase a quoted number through Telnyx
+      summary: Purchase a quoted number through Twilio
       security:
         - vedoyApiKey: []
       parameters:
@@ -442,7 +442,7 @@ paths:
           description: Quote expired
   /v1/messages:
     post:
-      summary: Send an SMS from a project-owned number through Telnyx
+      summary: Send an SMS from a project-owned number through Twilio
       security:
         - vedoyApiKey: []
       parameters:
@@ -648,6 +648,37 @@ paths:
       responses:
         '200':
           description: Per-minute limit and remaining requests
+  /v1/billing/products:
+    get:
+      summary: List fixed Vedøy Credit packs and checkout availability
+      security: []
+      responses:
+        '200': { description: Credit product catalog }
+  /v1/billing/checkout:
+    post:
+      summary: Create a Stripe-hosted checkout for a project credit pack
+      security: [{ supabaseUser: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, product]
+              properties:
+                projectId: { type: string, format: uuid }
+                product: { type: string, enum: [starter, scale] }
+      responses:
+        '201': { description: Stripe-hosted checkout URL created }
+        '503': { description: Stripe checkout is not configured }
+  /v1/billing/overview:
+    get:
+      summary: List purchases and ledger entries for the signed-in owner
+      security: [{ supabaseUser: [] }]
+      responses:
+        '200': { description: Billing history and credit ledger }
 components:
   parameters:
     IdempotencyKey:

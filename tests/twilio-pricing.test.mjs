@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeAvailableNumber, retailMicros, usdToCreditsMicrounits } from "../lib/telnyx.js";
+import { normalizeAvailableNumber, retailMicros, usdToCreditsMicrounits } from "../lib/twilio.js";
 
 test("20 percent gross margin divides provider cost by 0.8", () => {
   assert.equal(retailMicros(1_000_000, 2000), 1_250_000);
@@ -37,3 +37,4 @@ test("available numbers without recurring prices cannot be quoted", () => {
     { code: "provider_pricing_unavailable", status: 502 },
   );
 });
+

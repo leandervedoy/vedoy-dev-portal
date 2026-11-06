@@ -21,7 +21,7 @@ create table if not exists developer_webhook_events (
   project_id uuid not null references developer_projects (id) on delete cascade,
   event_type text not null check (event_type ~ '^[a-z0-9_.-]{3,120}$'),
   payload jsonb not null default '{}'::jsonb,
-  source text not null default 'vedoy' check (source in ('vedoy', 'telnyx', 'agent')),
+  source text not null default 'vedoy' check (source in ('vedoy', 'twilio', 'agent')),
   created_at timestamptz not null default now()
 );
 
