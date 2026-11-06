@@ -63,6 +63,6 @@
    catch(err){notice(err.message,true)}finally{state.loading=false;refresh()}
  });
  client.auth.onAuthStateChange((_event,session)=>{if(!session?.access_token){state.token="";$("#auth-panel").hidden=false;$("#workspace").hidden=true;$("#session-chip").textContent="Ikke logget inn"}else if(session.access_token!==state.token){load().catch(console.error)}});
- view(["overview","modules","keys","billing"].includes(location.hash.slice(1))?location.hash.slice(1):"overview");
+ view(["overview","services","modules","keys","billing"].includes(location.hash.slice(1))?location.hash.slice(1):"overview");
  load().catch(err=>authmsg(err.message));
 })();
