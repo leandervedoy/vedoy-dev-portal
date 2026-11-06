@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS developer_app_highscores (
  idempotency_key text NOT NULL CHECK(char_length(idempotency_key) BETWEEN 8 AND 200),
  created_at timestamptz NOT NULL DEFAULT now(),
  UNIQUE(project_id,idempotency_key),
- FOREIGN KEY (project_id,game_key) REFERENCES developer_app_games(project_id,game_key) ON DELETE CASCADE
+ FOREIGN KEY (project_id,game_key) REFERENCES developer_app_games(project_id,game_key) ON DELETE RESTRICT
 );
 CREATE INDEX IF NOT EXISTS developer_app_highscores_top_idx ON developer_app_highscores(project_id,game_key,score DESC,created_at ASC);
 COMMENT ON TABLE developer_app_highscores IS 'Beta: unverified developer submitted scores. Never awards Vedoy Coins.';
