@@ -9,6 +9,131 @@ servers:
   - url: https://vedoy-dev-portal.vercel.app/api
     description: Production API
 paths:
+  /v1/modules:
+    get:
+      tags: [App Modules]
+      summary: Discover available API modules and game choices
+      description: Public read-only catalog; availability and subscription requirements are descriptive.
+      security: []
+      responses:
+        '200':
+          description: Module definitions and selectable legacy game IDs
+  /v1/rewards/games:
+    get:
+      tags: [Rewards]
+      summary: Discover games undergoing Rewards migration
+      description: Metadata only. Engines are not hosted by this endpoint; no Vedoy Coins awarded.
+      security: []
+      responses:
+        '200':
+          description: Current game catalog with legacy status
+  /v1/projects/{projectId}/modules:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [App Modules]
+      summary: Read enabled modules, selected games, and subscription entitlement
+      security:
+        - supabaseUser: []
+      responses:
+        '200':
+          description: Modules and games owned by signed-in project owner
+        '404':
+          description: Project not owned by requester
+  /v1/projects/{projectId}/modules/{moduleKey}:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema: {type: string, format: uuid}
+      - in: path
+        name: moduleKey
+        required: true
+        schema: {type: string, enum: [games, highscores]}
+    put:
+      tags: [App Modules]
+      summary: Activate a module in the owned project
+      security:
+        - supabaseUser: []
+      responses:
+        '200': {description: Module activated}
+        '402': {description: Active subscription required for premium modules}
+        '409': {description: Missing module dependency or unavailable module}
+    delete:
+      tags: [App Modules]
+      summary: Remove a module, respecting its dependencies
+      security:
+        - supabaseUser: []
+      responses:
+        '200': {description: Module removed}
+  /v1/projects/{projectId}/games/{gameKey}:
+    parameters:
+      - in: path
+        name: projectId
+        required: true
+        schema: {type: string, format: uuid}
+      - in: path
+        name: gameKey
+        required: true
+        schema: {type: string, enum: [chess, ttt, four, hangman, snake, sudoku, '2048']}
+    put:
+      tags: [Rewards]
+      summary: Select a game for an app that has Games enabled
+      security:
+        - supabaseUser: []
+      responses:
+        '200': {description: Game selected}
+    delete:
+      tags: [Rewards]
+      summary: Remove selected game if no score history exists
+      security:
+        - supabaseUser: []
+      responses:
+        '200': {description: Game deselected}
+        '409': {description: Game has scores; score history preserved}
+  /v1/rewards/highscores:
+    get:
+      tags: [Rewards]
+      summary: Get top scores for a selected project game
+      description: Premium beta. Developer-submitted scores are not verified; no coins are awarded.
+      security:
+        - vedoyApiKey: []
+      parameters:
+        - in: query
+          name: game
+          required: true
+          schema: {type: string, example: snake}
+      responses:
+        '200': {description: Up to 50 scores for the API key's project}
+        '402': {description: Active project subscription required}
+        '403': {description: Module or game not enabled for project}
+    post:
+      tags: [Rewards]
+      summary: Submit an unverified beta highscore
+      description: Requires Games and Highscores enabled on the API-key project and an active project subscription. No coins issued.
+      security:
+        - vedoyApiKey: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [game, playerAlias, score]
+              properties:
+                game: {type: string, example: snake}
+                playerAlias: {type: string, minLength: 1, maxLength: 36}
+                score: {type: integer, minimum: 0, maximum: 100000000}
+      responses:
+        '201': {description: Accepted unverified score}
+        '402': {description: Active project subscription required}
+        '403': {description: Module or game not enabled}
+        '409': {description: Duplicate Idempotency-Key}
   /v1/deliver/providers:
     get:
       tags: [Delivery]
