@@ -18,6 +18,6 @@
     "stripe": "^20.4.1"
   },
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   }
 }
