@@ -8,6 +8,7 @@ const files = [
   "auth.js",
   "access.js",
   "developer-console.js",
+  "app-modules.js",
   "supabase-config.js",
   "openapi.yaml",
 ];
