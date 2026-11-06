@@ -8,7 +8,7 @@
  async function request(url,options={}){
    if(!state.token)throw Error("Du må logge inn.");
    const res=await fetch(api+url,{...options,headers:{"Authorization":"Bearer "+state.token,"Content-Type":"application/json",...(options.headers||{})},cache:"no-store"});
-   const obj=await res.json().catch(()=>({}));if(!res.ok)throw Error(obj.error?.message||"API-feil ("+res.status+")");return obj.data??obj;
+   const obj=await res.json().catch(()=>({}));if(!res.ok)throw Error(obj.error?.message||"API-feil ("+res.status+")");return url==="/modules"?obj:(obj.data??obj);
  }
  function view(name){state.view=name;document.querySelectorAll("[data-panel]").forEach(x=>x.hidden=x.dataset.panel!==name);document.querySelectorAll("[data-view]").forEach(x=>{x.classList.toggle("active",x.dataset.view===name);x.setAttribute("aria-current",x.dataset.view===name?"page":"false")});location.hash=name==="overview"?"":"#"+name;}
  function refresh(){
