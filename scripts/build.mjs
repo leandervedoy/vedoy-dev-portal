@@ -3,6 +3,7 @@ import { cp, mkdir, rm } from "node:fs/promises";
 const files = [
   "index.html",
   "styles.css",
+  "app-modules.css",
   "app.js",
   "auth.css",
   "auth.js",
