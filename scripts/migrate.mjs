@@ -8,6 +8,7 @@ const migrations = [
   "001_developer_platform.sql",
   "002_telnyx_commerce.sql",
   "003_webhooks_and_agents.sql",
+  "004_app_modules.sql",
 ];
 const client = new pg.Client({
   connectionString,
