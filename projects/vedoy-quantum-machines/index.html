@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="no">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="theme-color" content="#071b23">
+ <meta name="description" content="Vedoy Quantum Machines: interaktiv forskning på BB84 og ordvis nøkkelmateriale. Kun demonstrasjon, ikke ekte QKD.">
+ <title>Vedoy Quantum Machines | QKD Research Lab</title>
+ <link rel="stylesheet" href="/style.css">
+ <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+ <header class="site-header">
+  <a class="brand" href="/"><span class="brandmark" aria-hidden="true">◈</span><span>Vedoy <strong>Quantum Machines</strong></span></a>
+  <span class="release">RESEARCH PREVIEW 0.1</span>
+ </header>
+ <main>
+  <section class="hero" aria-labelledby="title">
+   <div class="eyebrow">VEDOY LAB / QUANTUM KEY DISTRIBUTION</div>
+   <h1 id="title">See the science.<br><em>Measure the uncertainty.</em></h1>
+   <p>Utforsk kvantenøkkeldeling med BB84 og undersøk kryptering med separate nøkkelbiter for hvert ord. Ingen fiktive sikkerhetsløfter.</p>
+   <div class="hero-meta"><span class="pill warning">⚠ Simulering – ikke fysisk QKD</span><span class="pill">Ingen produksjonsnøkler utstedes</span></div>
+  </section>
+  <section class="story" aria-label="Forskjell på nøkkelmetodene">
+   <article><div class="story-symbol">01</div><h2>QKD</h2><p>Kvantefysisk nøkkeldeling over en fysisk kvantekanal. Her simuleres BB84 uten fotonmaskinvare.</p></article>
+   <article><div class="story-symbol">02</div><h2>QRNG</h2><p>En kvantetilfeldighetskilde. Krever attestert fysisk kilde før «quantum»-modus kan brukes.</p></article>
+   <article><div class="story-symbol">03</div><h2>Ordvis OTP</h2><p>Hvert ord og skilletegn får en egen, ikke-overlappende del av én tilfeldig byte-pad. Demo, ikke ekte OTP-garanti.</p></article>
+  </section>
+  <section class="section" aria-labelledby="bbtitle">
+   <div class="section-heading"><span class="eyebrow">01 / QUANTUM COMMUNICATION</span><h2 id="bbtitle">BB84-laboratoriet</h2><p>Send simulerte kvantebiter fra Alice til Bob. Undersøk hvordan feilraten endres når en avlytter måler noen av signalene.</p></div>
+   <div class="labgrid">
+    <form id="bb-form" class="panel controls">
+     <label for="intercept">Avlyttede signaler <output id="intercept-value">40 %</output></label>
+     <input type="range" id="intercept" min="0" max="100" step="5" value="40">
+     <label for="noise">Bakgrunnsstøy <output id="noise-value">1 %</output></label>
+     <input type="range" id="noise" min="0" max="10" step=".5" value="1">
+     <label for="distance">Simulert fiberavstand <output id="distance-value">10 km</output></label>
+     <input type="range" id="distance" min="0" max="75" step="5" value="10">
+     <label for="rounds">Antall kvantesignaler</label>
+     <select id="rounds"><option value="512">512</option><option value="2048" selected>2 048</option><option value="8192">8 192</option></select>
+     <button class="primary" type="submit">Kjør BB84-simulering</button>
+     <p class="note">Teoretisk kanalmodell (0,2 dB/km). Uten feilkorrigering, personvernforsterkning eller sikkerhetspåvisning.</p>
+    </form>
+    <div class="panel results">
+     <div class="statgrid">
+      <div class="metric"><span>Forventet QBER</span><strong id="bb-expected">–</strong></div>
+      <div class="metric"><span>Observert QBER</span><strong id="bb-observed">–</strong></div>
+      <div class="metric"><span>Beholdte råbiter</span><strong id="bb-remaining">–</strong></div>
+      <div class="metric"><span>Verifiserte hemmelige biter</span><strong id="bb-validated">0</strong></div>
+     </div>
+     <h3>Feilrate etter målegrunnlagssiling</h3>
+     <div class="barline"><span>Forventet</span><div class="track"><i id="expected-bar"></i></div><strong id="expected-text">–</strong></div>
+     <div class="barline"><span>Målt</span><div class="track"><i id="observed-bar"></i></div><strong id="observed-text">–</strong></div>
+     <p id="bb-status" class="note" role="status" aria-live="polite">Trykk «Kjør BB84-simulering» for å generere målinger.</p>
+     <div class="signal-steps"><div>Alice<span>sender biter</span></div><b aria-hidden="true">→</b><div>Quantum channel<span>tap og støy</span></div><b aria-hidden="true">→</b><div>Bob<span>måler biter</span></div></div>
+    </div>
+   </div>
+   <details class="panel detail"><summary>Se rådata fra simuleringen</summary><div class="table-scroll"><table><thead><tr><th>#</th><th>Alice bit</th><th>Alice basis</th><th>Bob bit</th><th>Bob basis</th><th>Samme basis?</th></tr></thead><tbody id="bb-preview"></tbody></table></div><p class="note">Kun demonstrasjon av inntil 24 detekterte signaler; ingen hemmelige nøkler fremstilles.</p></details>
+  </section>
+  <section class="section" aria-labelledby="otptitle">
+   <div class="section-heading"><span class="eyebrow">02 / PER-WORD CRYPTO EXPERIMENT</span><h2 id="otptitle">Del meldingen i hvert ord</h2><p>Alle ord, mellomrom, emoji og skilletegn behandles hver for seg. Hver del får nye, ikke-overlappende nøkkelbyte, men bare <strong>én samlet chiffertekst</strong> vises som meldingsformat.</p></div>
+   <div class="labgrid">
+    <form id="otp-form" class="panel controls">
+     <label for="message">Melding</label>
+     <textarea id="message" rows="5" maxlength="2000">Hei verden! Dette er Vedoy Sent. 🔐</textarea>
+     <label for="entropy">Kilde til tilfeldige byte</label>
+     <select id="entropy">
+      <option value="demo">Lokal WebCrypto CSPRNG (kun demo)</option>
+      <option value="quantum">Verifisert QRNG – krever fysisk leverandør</option>
+     </select>
+     <button class="primary" type="submit">Krypter ordvis i demo</button>
+     <div id="otp-alert" class="notice" aria-live="polite">Ingen kvanteentropikilde er tilkoblet. QRNG-modus avslår nøkkelgenerering.</div>
+     <button id="decrypt-button" class="secondary" type="button" disabled>Kontroller lokal dekryptering</button>
+     <p class="note">Nøkler og klartekst overføres ikke til noen server. Dette er ikke en sikker chatfunksjon.</p>
+    </form>
+    <div class="panel results">
+     <div class="statgrid">
+      <div class="metric"><span>Ord</span><strong id="otp-words">–</strong></div>
+      <div class="metric"><span>Segmenter inkl. tegn</span><strong id="otp-segments">–</strong></div>
+      <div class="metric"><span>Meldingsbyte</span><strong id="otp-bytes">–</strong></div>
+      <div class="metric"><span>Nøkkelbyte brukt</span><strong id="otp-padbytes">–</strong></div>
+     </div>
+     <h3>Lokale segmenter</h3>
+     <div id="otp-segment-list" class="segments" aria-live="polite"><p class="note">Skriv en melding og kjør den lokale demonstrasjonen.</p></div>
+     <h3>Samlet kryptert melding</h3>
+     <pre id="otp-output" class="cipher">Ingen chiffertekst ennå</pre>
+     <p class="note">Ingen ordgrenser, pad-byte eller nøkkelmateriale inkluderes i overføringskonvolutten. Total lengde kan fortsatt observeres.</p>
+    </div>
+   </div>
+  </section>
+  <section class="section last" aria-labelledby="realqkd">
+   <div class="section-heading"><span class="eyebrow">03 / REAL HARDWARE ROADMAP</span><h2 id="realqkd">Fra forskning til fysisk QKD</h2></div>
+   <div class="roadmap">
+    <div><b>01</b><h3>Simulering</h3><p>BB84, kvantemåling, feilrate og kontrollert avlytting.</p><small class="ok">Kode tilgjengelig</small></div>
+    <div><b>02</b><h3>QRNG-adapter</h3><p>Attestert entropikilde og sikker krypteringsnøkkelhåndtering.</p><small>Mangler fysisk leverandør</small></div>
+    <div><b>03</b><h3>Optisk QKD</h3><p>Fotonkilde, modulator, fiber, synkronisering, detektorer og optisk sikkerhetsanalyse.</p><small>Ikke bygget</small></div>
+    <div><b>04</b><h3>Vedoy Shield</h3><p>Autentisert nøkkellevering via revidert QKD-grensesnitt, f.eks. ETSI GS QKD 014.</p><small>Ikke koblet til Sent</small></div>
+   </div>
+   <p class="legal">Et stort antall krypteringslag eller ordvise nøkkelbiter gir ikke alene bedre sikkerhet. Ekte OTP forutsetter virkelig tilfeldig og hemmelig nøkkelmateriale med meldingslengde, brukt nøyaktig én gang. Kilde: <a href="https://www.etsi.org/technical-groups/qkd/" target="_blank" rel="noopener noreferrer">ETSI QKD</a>.</p>
+  </section>
+ </main>
+ <footer>Vedoy Quantum Machines <span>Forskning og undervisning · Ingen produksjonsnøkler</span></footer>
+</body></html>
