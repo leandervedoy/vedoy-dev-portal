@@ -3,7 +3,7 @@
  const base="/api/v1";
  const $=selector=>document.querySelector("[data-app-module-root] "+selector);
  const safe=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
- const state={token:"",projects:[],catalog:[],games:[],enabled:[],selected:[],subscribed:false,projectId:"",loading:false};
+ const state={token:"",projects:[],catalog:[],games:[],enabled:[],selected:[],subscribed:false,projectId:"",loading:false,requestId:0};
  async function api(path,options={}) {
    const response=await fetch(base+path,{...options,headers:{"Content-Type":"application/json",...(state.token?{"Authorization":"Bearer "+state.token}:{}),...(options.headers||{})},cache:"no-store"});
    const data=await response.json().catch(()=>({}));
@@ -41,15 +41,16 @@
    }
  }
  async function syncProject(projectId) {
-   state.projectId=projectId;state.enabled=[];state.selected=[];state.subscribed=false;
+   const requestId=++state.requestId;state.projectId=projectId;state.enabled=[];state.selected=[];state.subscribed=false;
    if(!projectId){render();return}
    try{
      const result=await api("/projects/"+encodeURIComponent(projectId)+"/modules");
+     if(requestId!==state.requestId)return;
      state.enabled=result.data.modules||[];
      state.selected=result.data.games||[];
      state.subscribed=Boolean(result.data.subscriptionActive);
      render();status("App modules loaded.");
-   }catch(e){render();status(e.message,true)}
+   }catch(e){if(requestId===state.requestId){render();status(e.message,true)}}
  }
  async function load(){
    if(!$("[data-module-project]")||!window.vedoySupabase)return;
@@ -65,7 +66,7 @@
      state.catalog=catalog.data||[];
      state.games=catalog.games||[];
      if(!state.projects.some(x=>x.id===state.projectId))state.projectId=state.projects[0]?.id||"";
-     await syncProject(state.projectId);
+     await syncProject(selectedProject);
    }catch(e){status(e.message,true)}
  }
  document.addEventListener("change",e=>{if(e.target.matches("[data-module-project]"))syncProject(e.target.value)});
@@ -80,11 +81,12 @@
    }
    const toggle=e.target.closest("[data-module-toggle],[data-game-toggle]");
    if(!toggle||state.loading||!state.projectId)return;
+   const selectedProject=state.projectId;
    const isGame=toggle.hasAttribute("data-game-toggle"),key=isGame?toggle.dataset.gameToggle:toggle.dataset.moduleToggle;
    const active=isGame?state.selected.includes(key):state.enabled.includes(key);
    state.loading=true;render();
    try{
-     await api("/projects/"+state.projectId+"/"+(isGame?"games":"modules")+"/"+encodeURIComponent(key),{method:active?"DELETE":"PUT"});
+     await api("/projects/"+selectedProject+"/"+(isGame?"games":"modules")+"/"+encodeURIComponent(key),{method:active?"DELETE":"PUT"});
      await syncProject(state.projectId);
      status((active?"Removed ":"Added ")+key+".");
    }catch(e){status(e.message,true)}finally{state.loading=false;render()}
