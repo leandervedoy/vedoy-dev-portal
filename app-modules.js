@@ -42,11 +42,13 @@
  }
  async function syncProject(projectId) {
    const requestId=++state.requestId;state.projectId=projectId;state.enabled=[];state.selected=[];state.subscribed=false;
+   document.dispatchEvent(new CustomEvent("vedoy-modules-changed",{detail:{projectId,modules:[]}}));
    if(!projectId){render();return}
    try{
      const result=await api("/projects/"+encodeURIComponent(projectId)+"/modules");
      if(requestId!==state.requestId)return;
      state.enabled=result.data.modules||[];
+     document.dispatchEvent(new CustomEvent("vedoy-modules-changed",{detail:{projectId,modules:state.enabled}}));
      state.selected=result.data.games||[];
      state.subscribed=Boolean(result.data.subscriptionActive);
      render();status("App modules loaded.");
