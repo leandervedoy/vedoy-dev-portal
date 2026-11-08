@@ -7,3 +7,4 @@ public/
 developer-portal/
 _vercel-static/
 .neon
+.env*

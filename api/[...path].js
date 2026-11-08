@@ -4,14 +4,17 @@ import { query, transaction } from "../lib/database.js";
 import { catalogHandler } from "../lib/public-catalog.js";
 import { handleAppModuleRoutes } from "../lib/app-modules-api.js";
 import { deliverWebhook, emitWebhookEvent, webhookEndpointSecret } from "../lib/webhooks.js";
+import { billingProducts, purchasableProduct, stripeClient } from "../lib/billing.js";
+import { openAIConfigured, openAIRequest } from "../lib/openai-provider.js";
 import {
   normalizeAvailableNumber,
   pricingConfiguration,
   retailMicros,
-  telnyxConfigured,
-  telnyxRequest,
+  twilioConfigured,
+  twilioNumberResource,
+  twilioRequest,
   usdToCreditsMicrounits,
-} from "../lib/telnyx.js";
+} from "../lib/twilio.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://niedmgyyougvgiiuwcvw.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_7PrmP1V4enFECw0jfTAiDw_XAXD-xqd";
@@ -128,6 +131,8 @@ async function authorizeApiKey(req, route, costMicrounits = 0) {
 
 function routePath(req) {
   const url = new URL(req.url, "https://portal.local");
+  const rewritten = url.searchParams.get("__vedoy_route");
+  if (rewritten) return `/v1/${rewritten.replace(/^\/+/, "")}`;
   return url.pathname.replace(/^\/api/, "") || "/";
 }
 
@@ -141,6 +146,12 @@ function requireIdempotencyKey(req) {
     throw Object.assign(new Error("Idempotency-Key must contain 8–200 characters."), { status: 400, code: "idempotency_key_required" });
   }
   return value;
+}
+
+function configuredCreditCost(envName, fallbackCredits) {
+  const credits = Number(process.env[envName] || fallbackCredits);
+  if (!Number.isFinite(credits) || credits <= 0 || credits > 100_000) throw new Error(`${envName} must be a positive number.`);
+  return Math.ceil(credits * 1_000_000);
 }
 
 function validWebhookUrl(value) {
@@ -190,7 +201,7 @@ async function reserveProviderOperation({ auth, quoteId = null, operationType, i
     const created = await client.query(
       `insert into developer_provider_operations
        (project_id, api_key_id, quote_id, provider, operation_type, idempotency_key, customer_charge_micros, currency)
-       values ($1,$2,$3,'telnyx',$4,$5,$6,$7) returning *`,
+       values ($1,$2,$3,'twilio',$4,$5,$6,$7) returning *`,
       [auth.project_id, auth.api_key_id, quoteId, operationType, idempotencyKey, chargeMicrounits, currency],
     );
     if (chargeMicrounits > 0) {
@@ -198,7 +209,7 @@ async function reserveProviderOperation({ auth, quoteId = null, operationType, i
         `insert into developer_ledger_entries
          (project_id, amount_microunits, entry_type, description, idempotency_key, metadata)
          values ($1,$2,'provider_reservation',$3,$4,$5::jsonb)`,
-        [auth.project_id, -chargeMicrounits, `Telnyx ${operationType}`, `provider:${idempotencyKey}`, JSON.stringify({ operationId: created.rows[0].id })],
+        [auth.project_id, -chargeMicrounits, `Twilio ${operationType}`, `provider:${idempotencyKey}`, JSON.stringify({ operationId: created.rows[0].id })],
       );
     }
     return { existing: false, operation: created.rows[0] };
@@ -218,7 +229,7 @@ async function finishProviderOperation(operation, { status, responsePayload, err
         `insert into developer_ledger_entries
          (project_id, amount_microunits, entry_type, description, idempotency_key, metadata)
          values ($1,$2,'provider_refund',$3,$4,$5::jsonb) on conflict do nothing`,
-        [operation.project_id, operation.customer_charge_micros, `Refund for failed Telnyx ${operation.operation_type}`, `provider-refund:${operation.id}`, JSON.stringify({ operationId: operation.id })],
+        [operation.project_id, operation.customer_charge_micros, `Refund for failed Twilio ${operation.operation_type}`, `provider-refund:${operation.id}`, JSON.stringify({ operationId: operation.id })],
       );
     }
     return updated.rows[0];
@@ -243,15 +254,23 @@ export default async function handler(req, res) {
       );
       const pricing = pricingConfiguration();
       const schemaReady = Object.entries(database.rows[0]).filter(([key]) => key.endsWith("_ready")).every(([, ready]) => ready);
-      const telnyxReady = telnyxConfigured();
+      const twilioReady = twilioConfigured();
+      const aiReady = openAIConfigured();
       return send(res, 200, {
         ok: true,
         service: "vedoy-developer-api",
         version: API_VERSION,
         database: { provider: process.env.DATABASE_PROVIDER || "postgresql", connected: true, name: database.rows[0].name },
-        providers: { telnyx: telnyxReady ? "configured" : "not_configured" },
+        providers: {
+          twilio: twilioReady ? "configured" : "not_configured",
+          openai: aiReady ? "configured" : "not_configured",
+          stripe: stripeClient() ? "configured" : "not_configured",
+        },
         capabilities: {
-          phoneNumbers: { ready: telnyxReady && schemaReady, schemaReady, grossMarginBps: pricing.grossMarginBps },
+          phoneNumbers: { ready: twilioReady && schemaReady && pricing.numberMonthlyUsdMicros > 0, schemaReady, grossMarginBps: pricing.grossMarginBps },
+          messaging: { ready: twilioReady && schemaReady && pricing.smsProviderUsdMicros > 0 },
+          models: { ready: aiReady },
+          billing: { ready: Boolean(stripeClient()) && billingProducts().some(product => product.priceId) },
         },
         docs: "/openapi.yaml",
       });
@@ -323,6 +342,41 @@ export default async function handler(req, res) {
       const user = await requireUser(req);
       const wallets = await query(`select b.project_id,b.balance_microunits,b.updated_at from developer_wallet_balances b join developer_projects p on p.id = b.project_id where p.owner_id = $1`, [user.id]);
       return send(res, 200, { data: wallets.rows });
+    }
+    if (req.method === "GET" && path === "/v1/billing/products") {
+      const products = billingProducts().map(({ env, priceId, ...product }) => ({ ...product, available: Boolean(priceId) }));
+      return send(res, 200, { data: products, checkoutAvailable: Boolean(stripeClient()) && products.some(product => product.available) }, { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600" });
+    }
+    if (req.method === "GET" && path === "/v1/billing/overview") {
+      const user = await requireUser(req);
+      const purchases = await query(`select s.stripe_session_id,s.project_id,s.product_slug,s.credits_microunits,s.amount_minor,s.currency,s.payment_status,s.created_at,s.completed_at from developer_checkout_sessions s join developer_projects p on p.id=s.project_id where p.owner_id=$1 order by s.created_at desc limit 100`, [user.id]);
+      const ledger = await query(`select l.project_id,l.amount_microunits,l.entry_type,l.description,l.created_at from developer_ledger_entries l join developer_projects p on p.id=l.project_id where p.owner_id=$1 order by l.created_at desc limit 100`, [user.id]);
+      return send(res, 200, { data: { purchases: purchases.rows, ledger: ledger.rows } });
+    }
+    if (req.method === "POST" && path === "/v1/billing/checkout") {
+      const user = await requireUser(req);
+      const input = await body(req);
+      const product = purchasableProduct(String(input.product || ""));
+      const stripe = stripeClient();
+      if (!stripe || !product) return send(res, 503, { error: { code: "checkout_not_configured", message: "Credit checkout is not configured for this deployment." } });
+      const owned = await query("select id,name from developer_projects where id=$1 and owner_id=$2", [input.projectId, user.id]);
+      if (!owned.rowCount) return send(res, 404, { error: { code: "project_not_found", message: "Project not found." } });
+      const existing = await query("select stripe_customer_id from developer_billing_customers where project_id=$1", [input.projectId]);
+      let customerId = existing.rows[0]?.stripe_customer_id;
+      if (!customerId) {
+        const created = await stripe.customers.create({ email: user.email || undefined, name: owned.rows[0].name, metadata: { project_id: input.projectId } });
+        customerId = created.id;
+        await query(`insert into developer_billing_customers (project_id,stripe_customer_id,email) values ($1,$2,$3) on conflict (project_id) do update set stripe_customer_id=excluded.stripe_customer_id,email=excluded.email,updated_at=now()`, [input.projectId, customerId, user.email || null]);
+      }
+      const origin = process.env.VEDOY_PUBLIC_URL || "https://vedoy-dev-portal.vercel.app";
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment", customer: customerId, line_items: [{ price: product.priceId, quantity: 1 }],
+        success_url: `${origin}/console/?checkout=success`, cancel_url: `${origin}/console/?checkout=cancelled`,
+        client_reference_id: input.projectId,
+        metadata: { project_id: input.projectId, product_slug: product.slug, credits: String(product.credits) },
+      }, { idempotencyKey: String(req.headers["idempotency-key"] || `checkout:${input.projectId}:${product.slug}:${Date.now()}`) });
+      await query(`insert into developer_checkout_sessions (stripe_session_id,project_id,product_slug,credits_microunits,payment_status) values ($1,$2,$3,$4,'open') on conflict do nothing`, [session.id, input.projectId, product.slug, product.credits * 1_000_000]);
+      return send(res, 201, { data: { checkoutUrl: session.url, sessionId: session.id } });
     }
     if (req.method === "GET" && path === "/v1/webhooks/endpoints") {
       const auth = await authorizeApiKey(req, path, 0);
@@ -438,52 +492,45 @@ export default async function handler(req, res) {
       const auth = await authorizeApiKey(req, path, 0);
       return send(res, 200, {
         data: [
-          { id: "vedoy/openai", type: "text", status: "preview", context_window: 128000, max_output: 4096 },
+          { id: "vedoy/openai", providerModel: process.env.OPENAI_CHAT_MODEL || "gpt-5-mini", type: "text", status: openAIConfigured() ? "available" : "not_configured", context_window: 128000, max_output: 4096 },
           { id: "vedoy/router", type: "text", status: "planned", context_window: 256000, max_output: 8192 },
-          { id: "vedoy/embeddings", type: "embedding", status: "preview", dimensions: 1536 },
-          { id: "vedoy/chat", type: "chat", status: "preview", context_window: 128000, max_output: 4096 },
+          { id: "vedoy/embeddings", providerModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small", type: "embedding", status: openAIConfigured() ? "available" : "not_configured", dimensions: 1536 },
+          { id: "vedoy/chat", providerModel: process.env.OPENAI_CHAT_MODEL || "gpt-5-mini", type: "chat", status: openAIConfigured() ? "available" : "not_configured", context_window: 128000, max_output: 4096 },
         ],
         projectId: auth.project_id,
       }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "POST" && path === "/v1/chat/completions") {
-      const auth = await authorizeApiKey(req, path, 0);
+      const auth = await authorizeApiKey(req, path, configuredCreditCost("VEDOY_CHAT_REQUEST_CREDITS", 5));
       const input = await body(req);
       const messages = Array.isArray(input.messages) ? input.messages : [];
       if (!messages.length) {
         return send(res, 422, { error: { code: "invalid_messages", message: "At least one message is required." } });
       }
-      const lastMessage = messages[messages.length - 1];
-      const responseContent = `Vedøy API response: You said "${String(lastMessage.content || "").slice(0, 200)}". This is a free demo endpoint.`;
-      return send(res, 200, {
-        id: `chatcmpl-${randomBytes(12).toString("hex")}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: input.model || "vedoy/chat",
-        choices: [{
-          index: 0,
-          message: { role: "assistant", content: responseContent },
-          finish_reason: "stop",
-        }],
-        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+      const messageSize = messages.reduce((total, message) => total + String(message?.content || "").length, 0);
+      if (messages.length > 100 || messageSize > 50_000) return send(res, 413, { error: { code: "request_too_large", message: "Use at most 100 messages and 50,000 text characters per request." } });
+      const payload = await openAIRequest("/chat/completions", {
+        model: process.env.OPENAI_CHAT_MODEL || "gpt-5-mini",
+        messages,
+        temperature: Number.isFinite(Number(input.temperature)) ? Number(input.temperature) : undefined,
+        max_tokens: Math.min(4096, Math.max(1, Number(input.max_tokens || 1024))),
+      });
+      return send(res, 200, { ...payload, model: input.model || "vedoy/chat", projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "POST" && path === "/v1/embeddings") {
-      const auth = await authorizeApiKey(req, path, 0);
+      const auth = await authorizeApiKey(req, path, configuredCreditCost("VEDOY_EMBEDDING_REQUEST_CREDITS", 1));
       const input = await body(req);
       const text = String(input.input || input.text || "").trim();
       if (!text) {
         return send(res, 422, { error: { code: "invalid_input", message: "Input text is required." } });
       }
-      const embedding = Array.from({ length: 1536 }, () => Number((Math.random() * 2 - 1).toFixed(6)));
-      return send(res, 200, {
-        object: "list",
-        data: [{ object: "embedding", index: 0, embedding }],
-        model: input.model || "vedoy/embeddings",
-        usage: { prompt_tokens: 5, total_tokens: 5 },
-        projectId: auth.project_id,
-      }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
+      if (text.length > 50_000) return send(res, 413, { error: { code: "request_too_large", message: "Embedding input must not exceed 50,000 characters." } });
+      const payload = await openAIRequest("/embeddings", {
+        model: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
+        input: text,
+        dimensions: 1536,
+      });
+      return send(res, 200, { ...payload, model: input.model || "vedoy/embeddings", projectId: auth.project_id }, { "X-RateLimit-Remaining": String(auth.remaining_requests) });
     }
     if (req.method === "GET" && path === "/v1/credits/transactions") {
       const user = await requireUser(req);
@@ -547,12 +594,13 @@ export default async function handler(req, res) {
       });
       params.append("filter[features]", "sms");
       params.append("filter[features]", "voice");
-      const { payload } = await telnyxRequest(`/available_phone_numbers?${params}`);
+      const { payload } = await twilioRequest(`/available_phone_numbers?${params}`);
       const pricing = pricingConfiguration();
+      if (!pricing.numberMonthlyUsdMicros) return send(res, 503, { error: { code: "number_pricing_not_configured", message: "Verified Twilio number pricing must be configured before inventory can be sold." } });
       let pricedNumbers;
       try {
         if (!Array.isArray(payload.data)) {
-          throw Object.assign(new Error("Telnyx returned an invalid available-number response."), { status: 502, code: "invalid_provider_response" });
+          throw Object.assign(new Error("Twilio returned an invalid available-number response."), { status: 502, code: "invalid_provider_response" });
         }
         pricedNumbers = payload.data.map(item => normalizeAvailableNumber(item, pricing))
           .filter(item => item.phoneNumber && item.currency === "USD");
@@ -564,7 +612,7 @@ export default async function handler(req, res) {
           `insert into developer_provider_quotes
            (project_id,provider,product_type,provider_reference,currency,provider_upfront_micros,provider_recurring_micros,
             customer_upfront_micros,customer_recurring_micros,gross_margin_bps,metadata,expires_at)
-           select $1,'telnyx','phone_number',item.phone_number,item.currency,item.provider_upfront_micros,item.provider_monthly_micros,
+           select $1,'twilio','phone_number',item.phone_number,item.currency,item.provider_upfront_micros,item.provider_monthly_micros,
                   item.customer_upfront_micros,item.customer_monthly_micros,$3,item.metadata,now()+interval '10 minutes'
              from jsonb_to_recordset($2::jsonb) as item(
                phone_number text,currency text,provider_upfront_micros bigint,provider_monthly_micros bigint,
@@ -617,7 +665,7 @@ export default async function handler(req, res) {
       const auth = await authorizeApiKey(req, path, 0);
       const input = await body(req);
       const quote = await query(
-        `select * from developer_provider_quotes where id=$1 and project_id=$2 and provider='telnyx'
+        `select * from developer_provider_quotes where id=$1 and project_id=$2 and provider='twilio'
          and product_type='phone_number' and expires_at>now()`,
         [input.quoteId, auth.project_id],
       );
@@ -632,7 +680,7 @@ export default async function handler(req, res) {
         return send(res, reserved.operation.status === "failed" ? 422 : 409, { error: { code: `provider_operation_${reserved.operation.status}`, message: "This operation already exists. Use its operation ID for support or reconciliation." }, operation: publicOperation(reserved.operation) });
       }
       try {
-        const { payload, requestId } = await telnyxRequest("/number_orders", {
+        const { payload, requestId } = await twilioRequest("/number_orders", {
           method: "POST",
           idempotencyKey,
           body: { phone_numbers: [{ phone_number: priced.provider_reference }], customer_reference: reserved.operation.id },
@@ -642,11 +690,11 @@ export default async function handler(req, res) {
         await query(
           `insert into developer_phone_numbers
            (project_id,provider,provider_order_id,phone_number,status,country_code,number_type,currency,customer_monthly_micros,provider_monthly_micros,capabilities)
-           values ($1,'telnyx',$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) on conflict (provider,phone_number) do update set status=excluded.status,updated_at=now()`,
+           values ($1,'twilio',$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) on conflict (provider,phone_number) do update set status=excluded.status,updated_at=now()`,
           [auth.project_id, order.id || null, priced.provider_reference, order.status || "pending", priced.metadata?.countryCode || null, priced.metadata?.numberType || null, priced.currency, usdToCreditsMicrounits(Number(priced.customer_recurring_micros), pricing.creditUsdMicros), priced.provider_recurring_micros, JSON.stringify(priced.metadata?.features || [])],
         );
         await finishProviderOperation(reserved.operation, { status: "succeeded", responsePayload: result, providerRequestId: requestId, providerResourceId: order.id, providerCostMicros: Number(priced.provider_upfront_micros) + Number(priced.provider_recurring_micros) });
-        await emitWebhookEvent({ projectId: auth.project_id, eventType: "number_order.created", payload: result, source: "telnyx" }).catch(() => {});
+        await emitWebhookEvent({ projectId: auth.project_id, eventType: "number_order.created", payload: result, source: "twilio" }).catch(() => {});
         return send(res, 201, { data: result });
       } catch (error) {
         const status = error.outcomeUnknown ? "unknown" : "failed";
@@ -676,18 +724,18 @@ export default async function handler(req, res) {
       }
       try {
         const requestBody = { from, to, text };
-        if (process.env.TELNYX_MESSAGING_PROFILE_ID) requestBody.messaging_profile_id = process.env.TELNYX_MESSAGING_PROFILE_ID;
-        const { payload, requestId } = await telnyxRequest("/messages", { method: "POST", body: requestBody, idempotencyKey });
+        if (process.env.TWILIO_MESSAGING_SERVICE_SID) requestBody.messaging_service_sid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+        const { payload, requestId } = await twilioRequest("/messages", { method: "POST", body: requestBody, idempotencyKey });
         const message = payload.data || {};
         const result = { operationId: reserved.operation.id, messageId: message.id || null, from, to, status: message.to?.[0]?.status || "queued", chargedCredits: chargeMicrounits / 1_000_000 };
         await query(
           `insert into developer_messages
            (project_id,provider,provider_message_id,from_number,to_number,status,customer_charge_micros,provider_cost_micros,currency,parts)
-           values ($1,'telnyx',$2,$3,$4,$5,$6,$7,'USD',$8)`,
+           values ($1,'twilio',$2,$3,$4,$5,$6,$7,'USD',$8)`,
           [auth.project_id, message.id || null, from, to, result.status, chargeMicrounits, pricing.smsProviderUsdMicros, message.parts || null],
         );
         await finishProviderOperation(reserved.operation, { status: "succeeded", responsePayload: result, providerRequestId: requestId, providerResourceId: message.id, providerCostMicros: pricing.smsProviderUsdMicros });
-        await emitWebhookEvent({ projectId: auth.project_id, eventType: "message.sent", payload: result, source: "telnyx" }).catch(() => {});
+        await emitWebhookEvent({ projectId: auth.project_id, eventType: "message.sent", payload: result, source: "twilio" }).catch(() => {});
         return send(res, 202, { data: result });
       } catch (error) {
         const status = error.outcomeUnknown ? "unknown" : "failed";

@@ -8,7 +8,7 @@ alter table developer_ledger_entries add constraint developer_ledger_entries_ent
 create table if not exists developer_provider_quotes (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references developer_projects (id) on delete cascade,
-  provider text not null check (provider in ('telnyx')),
+  provider text not null check (provider in ('twilio')),
   product_type text not null check (product_type in ('phone_number')),
   provider_reference text not null,
   currency text not null check (currency ~ '^[A-Z]{3}$'),
@@ -30,7 +30,7 @@ create table if not exists developer_provider_operations (
   project_id uuid not null references developer_projects (id) on delete cascade,
   api_key_id uuid references developer_api_keys (id) on delete set null,
   quote_id uuid references developer_provider_quotes (id) on delete set null,
-  provider text not null check (provider in ('telnyx')),
+  provider text not null check (provider in ('twilio')),
   operation_type text not null check (operation_type in ('number_purchase', 'message_send')),
   idempotency_key text not null,
   status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed', 'unknown')),
@@ -52,7 +52,7 @@ create index if not exists developer_provider_operations_project_idx
 create table if not exists developer_phone_numbers (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references developer_projects (id) on delete cascade,
-  provider text not null check (provider in ('telnyx')),
+  provider text not null check (provider in ('twilio')),
   provider_number_id text,
   provider_order_id text,
   phone_number text not null,
@@ -74,7 +74,7 @@ create index if not exists developer_phone_numbers_project_idx
 create table if not exists developer_messages (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references developer_projects (id) on delete cascade,
-  provider text not null check (provider in ('telnyx')),
+  provider text not null check (provider in ('twilio')),
   provider_message_id text,
   from_number text not null,
   to_number text not null,
@@ -96,7 +96,7 @@ create unique index if not exists developer_messages_provider_id_idx
 
 create table if not exists developer_provider_webhooks (
   id uuid primary key default gen_random_uuid(),
-  provider text not null check (provider in ('telnyx')),
+  provider text not null check (provider in ('twilio')),
   provider_event_id text not null,
   event_type text not null,
   payload jsonb not null,
@@ -108,4 +108,5 @@ create table if not exists developer_provider_webhooks (
 
 alter table developer_messages add column if not exists provider_payload jsonb not null default '{}'::jsonb;
 alter table developer_provider_webhooks add column if not exists processing_error text;
+
 

@@ -6,7 +6,7 @@ import { join } from "node:path";
 const assets = [
   "styles.css", "app-modules.css", "portal-shell.css",
   "app.js", "auth.css", "auth.js", "access.js", "developer-console.js",
-  "app-modules.js", "console-app.js", "supabase-config.js", "openapi.yaml"
+  "app-modules.js", "console-app.js", "supabase-config.js", "openapi.yaml", "robots.txt", "sitemap.xml"
 ];
 await rm("public", {recursive:true, force:true});
 await mkdir("public", {recursive:true});
