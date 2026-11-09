@@ -1,0 +1,45 @@
+name: Vedoy Code Scanner pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/vedoy-code-scan.yml
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: leandervedoy/QuantumTest@8c68b490f4859a4baaf5e3d2480006745e2c16e2
+        with:
+          path: .
+          fail-on: none
+          output: ${{ runner.temp }}/vedoy-code-scan.sarif
+          exclude: |
+            _vercel-static/*
+            assets/vendor/*
+      - name: Validate SARIF structure
+        env:
+          SCAN_REPORT: ${{ runner.temp }}/vedoy-code-scan.sarif
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads(Path(os.environ['SCAN_REPORT']).read_text(encoding='utf-8'))
+          assert report['version'] == '2.1.0'
+          assert len(report['runs']) == 1
+          run = report['runs'][0]
+          assert run['tool']['driver']['name'] == 'Vedoy Code Scanner'
+          rules = {rule['id'] for rule in run['tool']['driver']['rules']}
+          assert all(result['ruleId'] in rules for result in run['results'])
+          print(f"Validated {len(run['results'])} SARIF results")
+          PY
