@@ -64,6 +64,28 @@
     renderQuickstart();
   }
 
+  function renderCanvasLink(projectId) {
+    let link = field("[data-open-canvas]");
+    if (!link) {
+      const select = field("[data-project-select]");
+      if (!select) return;
+      link = document.createElement("a");
+      link.dataset.openCanvas = "";
+      link.className = "button-secondary";
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.style.marginTop = "10px";
+      select.insertAdjacentElement("afterend", link);
+    }
+    if (!projectId) {
+      link.hidden = true;
+      return;
+    }
+    link.hidden = false;
+    link.href = `https://vedoy-canvas.vercel.app/?project=${encodeURIComponent(projectId)}`;
+    link.textContent = "Open in Vedøy Infinite Canvas ↗";
+  }
+
   function render() {
     const select = field("[data-project-select]");
     if (!select) return;
@@ -78,6 +100,7 @@
     field("[data-console-balance]").textContent = balance == null ? "—" : (Number(balance) / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 2 });
     field("[data-console-usage]").textContent = projectUsage.length.toLocaleString("en-US");
     field("[data-key-form]").querySelector("button").disabled = !projectId;
+    renderCanvasLink(projectId);
     if (issuedProjectId && issuedProjectId !== projectId) {
       issuedApiKey = "";
       issuedProjectId = "";
