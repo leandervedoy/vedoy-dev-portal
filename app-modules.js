@@ -5,7 +5,8 @@
  const safe=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
  const state={token:"",projects:[],catalog:[],games:[],enabled:[],selected:[],subscribed:false,projectId:"",loading:false};
  async function api(path,options={}) {
-   const response=await fetch(base+path,{...options,headers:{"Content-Type":"application/json",...(state.token?{"Authorization":"Bearer "+state.token}:{}),...(options.headers||{})},cache:"no-store"});
+   const cache=path==="/modules"&&(options.method||"GET").toUpperCase()==="GET"?"default":"no-store";
+   const response=await fetch(base+path,{...options,headers:{"Content-Type":"application/json",...(state.token?{"Authorization":"Bearer "+state.token}:{}),...(options.headers||{})},cache});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(data?.error?.message||"Request failed ("+response.status+")");
    return data;
