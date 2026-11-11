@@ -1,0 +1,5 @@
+import test from "node:test";import assert from "node:assert/strict";
+import {calculateApiMargin,calculateAdSplit,payoutEligibility} from "../lib/monetize-economics.js";
+test("API margin is positive only above variable cost",()=>{assert.deepEqual(calculateApiMargin({requests:100000,priceOrePer1000:50,variableCostOrePer1000:20}),{revenueOre:5000,variableCostOre:2000,grossMarginOre:3000});assert.throws(()=>calculateApiMargin({requests:100,priceOrePer1000:1,variableCostOrePer1000:2}));});
+test("Ad payout uses net cash received, not impressions",()=>{assert.deepEqual(calculateAdSplit({paidRevenueOre:100000,vedoyShareBps:2500,processingFeesOre:3000}),{netReceiptsOre:97000,vedoyFeeOre:24250,publisherPayableOre:72750});});
+test("Payout waits 30 days after actual receipt and verification",()=>{const input={receivedAt:"2026-11-01T00:00:00Z",now:new Date("2026-12-02T00:00:00Z")};assert.equal(payoutEligibility(input).eligible,false);assert.equal(payoutEligibility({...input,verified:true}).eligible,true);assert.equal(payoutEligibility({...input,verified:true,disputed:true}).eligible,false);});
