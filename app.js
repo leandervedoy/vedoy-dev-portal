@@ -252,9 +252,16 @@ function openPage(key,scroll=true){
  function initPriceEstimators(){
   content.querySelectorAll("[data-price-estimator]").forEach(card=>{
    const inputs={volume:card.querySelector('[data-estimate-input="volume"]'),workload:card.querySelector('[data-estimate-input="workload"]'),wage:card.querySelector('[data-estimate-input="wage"]')};
-   const money=value=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(value);
-   const update=()=>{const volume=Number(inputs.volume.value),workload=Number(inputs.workload.value),wage=Number(inputs.wage.value),rate=Number(card.dataset.rate),multiplier=Number(card.dataset.multiplier);const api=Math.max(1,volume*rate*(.55+workload/10));const manual=volume*(workload/60)*wage*.08*multiplier;card.querySelector("[data-estimate-volume]").textContent=volume.toLocaleString("en-US");card.querySelector("[data-estimate-workload]").textContent=workload;card.querySelector("[data-estimate-wage]").textContent=wage;card.querySelector("[data-estimate-api]").textContent=money(api);card.querySelector("[data-estimate-manual]").textContent=money(manual);card.querySelector("[data-estimate-saving]").textContent=money(Math.max(0,manual-api));};
-   Object.values(inputs).forEach(input=>input.addEventListener("input",update));update();
+   const outputs={volume:card.querySelector("[data-estimate-volume]"),workload:card.querySelector("[data-estimate-workload]"),wage:card.querySelector("[data-estimate-wage]"),api:card.querySelector("[data-estimate-api]"),manual:card.querySelector("[data-estimate-manual]"),saving:card.querySelector("[data-estimate-saving]")};
+   const moneyFormatter=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+   let frameId=null;
+   const update=()=>{const volume=Number(inputs.volume.value),workload=Number(inputs.workload.value),wage=Number(inputs.wage.value),rate=Number(card.dataset.rate),multiplier=Number(card.dataset.multiplier);const api=Math.max(1,volume*rate*(.55+workload/10));const manual=volume*(workload/60)*wage*.08*multiplier;outputs.volume.textContent=volume.toLocaleString("en-US");outputs.workload.textContent=workload;outputs.wage.textContent=wage;outputs.api.textContent=moneyFormatter.format(api);outputs.manual.textContent=moneyFormatter.format(manual);outputs.saving.textContent=moneyFormatter.format(Math.max(0,manual-api));};
+   const schedule=()=>{
+    if(frameId!==null)return;
+    frameId=requestAnimationFrame(()=>{frameId=null;update();});
+   };
+   Object.values(inputs).forEach(input=>input.addEventListener("input",schedule));
+   update();
   });
  }
  function initPhoneProvisioner(){
